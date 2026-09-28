@@ -7,7 +7,6 @@ import { Gate } from "./components/Gate.tsx";
 import { Invitation } from "./components/Invitation.tsx";
 import { Opening } from "./components/Opening.tsx";
 import { Profile } from "./components/Profile.tsx";
-import { Sprig } from "./components/Sprig.tsx";
 import { TabBar, type Page } from "./components/TabBar.tsx";
 import { useToast } from "./components/Toaster.tsx";
 import type { MomentId } from "./data/itinerary.ts";
@@ -45,6 +44,7 @@ function AuthedApp() {
   const [page, setPage] = useState<Page>(readPage);
   const [moment, setMoment] = useState<MomentId | null>(readMoment);
   const [slow, setSlow] = useState(false);
+  const [namedNow, setNamedNow] = useState(false);
   const waiting = isLoading || (isAuthenticated && viewer === undefined);
 
   useEffect(() => {
@@ -78,6 +78,15 @@ function AuthedApp() {
   }, [page, moment]);
 
   useEffect(() => {
+    setNamedNow(false);
+  }, [viewer?.email]);
+
+  useEffect(() => {
+    if (!viewer || viewer.hasName || namedNow) return;
+    if (window.location.hash !== "#perfil") window.location.hash = "#perfil";
+  }, [namedNow, page, viewer]);
+
+  useEffect(() => {
     if (viewer && !viewer.isAdmin && page === "panel") {
       window.location.hash = "#inicio";
     }
@@ -96,7 +105,17 @@ function AuthedApp() {
 
   if (!isAuthenticated || !viewer) return <Gate />;
 
+  const named = Boolean(viewer?.hasName) || namedNow;
+
+  function needsName() {
+    if (named) return false;
+    toast.note("Primero poné tu nombre y apellido.");
+    if (window.location.hash !== "#perfil") window.location.hash = "#perfil";
+    return true;
+  }
+
   function go(next: Page) {
+    if (next !== "perfil" && needsName()) return;
     const hash = `#${next}`;
     if (window.location.hash === hash) {
       setPage(next);
@@ -112,6 +131,7 @@ function AuthedApp() {
   }
 
   function goMoment(id: MomentId) {
+    if (needsName()) return;
     setPage("inicio");
     setMoment(id);
     const hash = `#${id}`;
@@ -133,8 +153,9 @@ function AuthedApp() {
           <Invitation
             copies={copies}
             isAdmin={viewer.isAdmin}
+            isBride={viewer.isBride}
             uploaderName={viewer.displayName}
-            named={viewer.hasName}
+            named={named}
             connected
           />
         )}
@@ -148,13 +169,21 @@ function AuthedApp() {
             lastName={viewer.lastName}
             isBride={viewer.isBride}
             isAdmin={viewer.isAdmin}
-            hasName={viewer.hasName}
+            hasName={named}
+            onReady={
+              viewer.hasName
+                ? undefined
+                : () => {
+                    setNamedNow(true);
+                    window.location.hash = "#inicio";
+                    window.scrollTo(0, 0);
+                  }
+            }
           />
         )}
         {current === "panel" && viewer.isAdmin && (
           <>
             <header className="hero">
-              <Sprig />
               <p className="eyebrow">Solo vos</p>
               <h1 className="profile-name">Panel</h1>
               <p className="lede">Las invitadas, la novia y Drive.</p>

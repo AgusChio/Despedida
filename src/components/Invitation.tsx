@@ -1,6 +1,5 @@
 import { Album } from "./Album.tsx";
 import { Rsvp } from "./Rsvp.tsx";
-import { Sprig } from "./Sprig.tsx";
 import { moments } from "../data/itinerary.ts";
 
 type MomentCopy = {
@@ -9,15 +8,21 @@ type MomentCopy = {
   note: string | null;
 };
 
+function forBride(text: string, isBride: boolean) {
+  return isBride ? text.replace("de negro", "de blanco").replace("De negro", "De blanco") : text;
+}
+
 export function Invitation({
   copies,
   isAdmin,
+  isBride,
   uploaderName,
   named,
   connected,
 }: {
   copies: { tarde: MomentCopy | null; escapada: MomentCopy | null } | null | undefined;
   isAdmin: boolean;
+  isBride: boolean;
   uploaderName: string;
   named: boolean;
   connected: boolean;
@@ -25,7 +30,6 @@ export function Invitation({
   return (
     <>
       <header className="hero">
-        <Sprig />
         <p className="eyebrow">Despedida de soltera · 2026</p>
         <h1>Caro</h1>
         <p className="dates">
@@ -47,8 +51,12 @@ export function Invitation({
               : moment.id === "escapada"
                 ? copies?.escapada
                 : null;
-          const lead = extra?.lead ?? moment.lead;
-          const details = extra?.details ?? [...moment.details];
+          const lead =
+            extra?.lead ??
+            (moment.id === "tarde" ? forBride(moment.lead, isBride) : moment.lead);
+          const details = (extra?.details ?? [...moment.details]).map((detail) =>
+            moment.id === "tarde" ? forBride(detail, isBride) : detail,
+          );
           const note = extra?.note ?? null;
           return (
             <article key={moment.id} id={moment.id} className="moment">
@@ -82,7 +90,6 @@ export function Invitation({
       </section>
 
       <footer className="closing">
-        <Sprig />
         <p>Para Caro, con todo el cariño.</p>
       </footer>
     </>

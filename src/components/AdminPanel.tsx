@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "convex/react";
+import { useState, type FormEvent } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { said } from "../lib/said.ts";
@@ -9,6 +10,7 @@ export function AdminPanel() {
   const connection = useQuery(api.photos.connection);
   const setBride = useMutation(api.users.setBride);
   const clearBride = useMutation(api.users.clearBride);
+  const renameGuest = useMutation(api.users.renameGuest);
   const toast = useToast();
 
   async function choose(userId: Id<"users">) {
@@ -37,34 +39,17 @@ export function AdminPanel() {
       </div>
       <p className="album-note">
         Las invitadas ven el plan. La actividad del sábado y la de la escapada solo las ves vos.
+        Si alguien no carga su nombre, lo podés escribir vos.
       </p>
       <ul className="guests">
         {guests?.map((guest) => (
-          <li key={guest.id}>
-            <div>
-              <strong>{guest.displayName || "Sin nombre"}</strong>
-              <span>{guest.email}</span>
-            </div>
-            {guest.isAdmin ? (
-              <span className="pill">Admin</span>
-            ) : guest.isBride ? (
-              <button
-                type="button"
-                className="pill pill-button"
-                onClick={() => void forget()}
-              >
-                Novia · quitar
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="pill pill-button"
-                onClick={() => void choose(guest.id)}
-              >
-                Es la novia
-              </button>
-            )}
-          </li>
+          <GuestRow
+            key={guest.id}
+            guest={guest}
+            onBride={() => void choose(guest.id)}
+            onForget={() => void forget()}
+            onRename={(firstName, lastName) => renameGuest({ userId: guest.id, firstName, lastName })}
+          />
         ))}
       </ul>
       {guests?.length === 0 && (
@@ -108,5 +93,106 @@ export function AdminPanel() {
         )}
       </section>
     </section>
+  );
+}
+
+function GuestRow({
+  guest,
+  onBride,
+  onForget,
+  onRename,
+}: {
+  guest: {
+    email: string;
+    displayName: string;
+    firstName: string;
+    lastName: string;
+    hasName: boolean;
+    isAdmin: boolean;
+    isBride: boolean;
+  };
+  onBride: () => void;
+  onForget: () => void;
+  onRename: (firstName: string, lastName: string) => Promise<null>;
+}) {
+  const toast = useToast();
+  const [editing, setEditing] = useState(false);
+  const [firstName, setFirstName] = useState(guest.firstName);
+  const [lastName, setLastName] = useState(guest.lastName);
+  const [pending, setPending] = useState(false);
+
+  function open() {
+    setFirstName(guest.firstName);
+    setLastName(guest.lastName);
+    setEditing(true);
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setPending(true);
+    try {
+      await onRename(firstName, lastName);
+      toast.ok("Quedó el nombre.");
+      setEditing(false);
+    } catch (caught) {
+      toast.error(said(caught, "No se pudo guardar el nombre."));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <li className={editing ? "is-editing" : undefined}>
+      <div>
+        <strong>{guest.displayName || "Sin nombre"}</strong>
+        <span>{guest.email}</span>
+        {!guest.hasName && <span className="guest-missing">Falta el nombre</span>}
+      </div>
+      {editing ? (
+        <form className="guest-edit" onSubmit={(event) => void submit(event)}>
+          <input
+            value={firstName}
+            aria-label="Nombre"
+            placeholder="Nombre"
+            autoComplete="given-name"
+            required
+            onChange={(event) => setFirstName(event.target.value)}
+          />
+          <input
+            value={lastName}
+            aria-label="Apellido"
+            placeholder="Apellido"
+            autoComplete="family-name"
+            required
+            onChange={(event) => setLastName(event.target.value)}
+          />
+          <div className="guest-actions">
+            <button type="submit" className="pill pill-button" disabled={pending}>
+              {pending ? "Guardando…" : "Guardar"}
+            </button>
+            <button type="button" className="pill" disabled={pending} onClick={() => setEditing(false)}>
+              Cancelar
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="guest-actions">
+          <button type="button" className="pill pill-button" onClick={open}>
+            Editar nombre
+          </button>
+          {guest.isAdmin ? (
+            <span className="pill">Admin</span>
+          ) : guest.isBride ? (
+            <button type="button" className="pill pill-button" onClick={onForget}>
+              Novia · quitar
+            </button>
+          ) : (
+            <button type="button" className="pill pill-button" onClick={onBride}>
+              Es la novia
+            </button>
+          )}
+        </div>
+      )}
+    </li>
   );
 }

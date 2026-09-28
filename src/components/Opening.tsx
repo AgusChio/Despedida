@@ -1,5 +1,3 @@
-import { Sprig } from "./Sprig.tsx";
-
 export function Opening({
   slow,
   onRetry,
@@ -9,7 +7,6 @@ export function Opening({
 }) {
   return (
     <main className="invitation gate opening">
-      <Sprig />
       <p className="eyebrow">Despedida de soltera · 2026</p>
       <h1>Caro</h1>
       <p className="dates">

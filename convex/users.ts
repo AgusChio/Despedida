@@ -58,7 +58,9 @@ export const guests = query({
         id: person._id,
         email: person.email ?? "",
         displayName: displayNameOf(person),
-        hasName: Boolean(person.firstName && person.lastName),
+        firstName: person.firstName?.trim() ?? "",
+        lastName: person.lastName?.trim() ?? "",
+        hasName: Boolean(person.firstName?.trim() && person.lastName?.trim()),
         isAdmin: isAdminEmail(person.email),
         isBride: person.isBride === true && !isAdminEmail(person.email),
       }))
@@ -70,6 +72,26 @@ export const guests = query({
           "es",
         );
       });
+  },
+});
+
+export const renameGuest = mutation({
+  args: {
+    userId: v.id("users"),
+    firstName: v.string(),
+    lastName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await currentUser(ctx);
+    if (!user?.isAdmin) throw new Error("Solo la admin puede cambiar nombres.");
+    const person = await ctx.db.get(args.userId);
+    if (!person) throw new Error("No encontré a esa invitada.");
+    const firstName = cleanName(args.firstName);
+    const lastName = cleanName(args.lastName);
+    if (!validName(firstName) || !validName(lastName)) {
+      throw new Error("Poné nombre y apellido, sin números.");
+    }
+    await ctx.db.patch(person._id, { firstName, lastName });
   },
 });
 

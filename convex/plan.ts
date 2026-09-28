@@ -17,7 +17,7 @@ export const copies = query({
       tarde: saturday
         ? {
             lead: saturday,
-            details: ["18:00", "Deán Funes 244", "De blanco"],
+            details: ["18:00", "Deán Funes 244", "De negro"],
             note: "La actividad solo la ves vos.",
           }
         : null,

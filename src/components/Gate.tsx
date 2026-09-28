@@ -1,6 +1,5 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useState } from "react";
-import { Sprig } from "./Sprig.tsx";
 import { said } from "../lib/said.ts";
 import { useToast } from "./Toaster.tsx";
 
@@ -22,7 +21,6 @@ export function Gate() {
 
   return (
     <main className="invitation gate">
-      <Sprig />
       <p className="eyebrow">Despedida de soltera · 2026</p>
       <h1>Caro</h1>
       <p className="dates">

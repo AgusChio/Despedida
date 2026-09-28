@@ -26,7 +26,7 @@ export function TabBar({
   onSignOut: () => void;
 }) {
   return (
-    <nav className="tabbar" aria-label="Navegación">
+    <nav className={isAdmin ? "tabbar is-crowded" : "tabbar"} aria-label="Navegación">
       {moments.map((item) => (
         <button
           key={item.id}

@@ -1,7 +1,7 @@
 :root {
   color-scheme: light;
   --paper: #f4efe8;
-  --card: #fbf8f4;
+  --card: #f7f6f3;
   --blush: #f6e4e8;
   --beige: #f3eadf;
   --pistachio: #e5f0e2;
@@ -31,11 +31,12 @@ body {
   font-weight: 300;
   font-size: 17px;
   line-height: 1.55;
-  background:
-    radial-gradient(900px 480px at 0% 0%, rgba(246, 228, 232, 0.95), transparent 62%),
-    radial-gradient(820px 440px at 100% 6%, rgba(229, 240, 226, 0.92), transparent 58%),
-    radial-gradient(700px 520px at 70% 100%, rgba(243, 234, 223, 0.95), transparent 52%),
-    var(--paper);
+  background-color: #f8e7eb;
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c17b88' fill-opacity='0.28' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='1.05'/%3E%3Ccircle cx='17' cy='17' r='1.05'/%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(900px 520px at 8% 0%, rgba(255, 248, 246, 0.55), transparent 60%),
+    radial-gradient(720px 480px at 100% 100%, rgba(229, 240, 226, 0.45), transparent 58%);
+  background-size: 28px 28px, auto, auto;
 }
 
 button,
@@ -76,12 +77,6 @@ a {
 .hero,
 .closing {
   text-align: center;
-}
-
-.sprig {
-  width: 132px;
-  height: 46px;
-  color: var(--leaf);
 }
 
 .eyebrow,
@@ -678,6 +673,37 @@ h2 {
   border-top: 1px solid var(--line);
 }
 
+.guests li.is-editing {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.guest-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.guest-edit {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  width: 100%;
+}
+
+.guest-edit input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+}
+
+.guest-missing {
+  color: var(--rose-deep);
+}
+
 .guests strong,
 .guests div span {
   display: block;
@@ -720,7 +746,7 @@ h2 {
   .invitation {
     width: min(100% - 16px, 880px);
     margin: 12px auto 24px;
-    padding: 52px 20px 36px;
+    padding: 56px 18px 40px;
   }
 
   .page .invitation {
@@ -728,9 +754,14 @@ h2 {
     margin: 0;
   }
 
-  .guests li {
+  .guests li,
+  .guest-edit {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .guest-edit {
+    display: flex;
   }
 
   .gmail,
@@ -779,6 +810,36 @@ h2 {
     letter-spacing: 0.04em;
     font-size: 0.58rem;
     padding: 8px 2px 6px;
+  }
+
+  .tabbar.is-crowded {
+    gap: 0;
+    padding: 4px;
+  }
+
+  .tabbar.is-crowded button {
+    gap: 1px;
+    padding: 7px 1px 6px;
+    letter-spacing: 0;
+    font-size: 0.46rem;
+    line-height: 1.05;
+    overflow: hidden;
+  }
+
+  .tabbar.is-crowded button > span:last-child {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .tabbar.is-crowded .tab-mark {
+    font-size: 0.78rem;
+  }
+
+  .tabbar.is-crowded svg,
+  .tabbar.is-crowded .tab-avatar {
+    width: 18px;
+    height: 18px;
   }
 }
 

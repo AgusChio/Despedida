@@ -4,8 +4,8 @@ export const moments = [
     step: "01",
     when: "Sábado 10 de octubre",
     title: "Tarde de chicas",
-    lead: "El plan es sorpresa. La única pista: llegá de blanco, a las 18.",
-    details: ["18:00", "Deán Funes 244", "De blanco"],
+    lead: "El plan es sorpresa. La única pista: llegá de negro, a las 18.",
+    details: ["18:00", "Deán Funes 244", "De negro"],
   },
   {
     id: "escapada",

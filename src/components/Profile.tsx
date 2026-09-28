@@ -1,4 +1,3 @@
-import { Sprig } from "./Sprig.tsx";
 import { NameForm } from "./NameForm.tsx";
 
 export function Profile({
@@ -11,6 +10,7 @@ export function Profile({
   isBride,
   isAdmin,
   hasName,
+  onReady,
 }: {
   email: string;
   image: string;
@@ -21,6 +21,7 @@ export function Profile({
   isBride: boolean;
   isAdmin: boolean;
   hasName: boolean;
+  onReady?: () => void;
 }) {
   const title = displayName || profileName || "Tu perfil";
   const initial = title.trim().charAt(0).toUpperCase() || "?";
@@ -28,7 +29,6 @@ export function Profile({
   return (
     <>
       <header className="hero">
-        <Sprig />
         {image ? (
           <img
             className="avatar"
@@ -55,6 +55,7 @@ export function Profile({
         profileName={profileName}
         initialFirst={firstName}
         initialLast={lastName}
+        onDone={onReady}
       />
     </>
   );
