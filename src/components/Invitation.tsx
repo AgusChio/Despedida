@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { Album } from "./Album.tsx";
 import { Rsvp } from "./Rsvp.tsx";
 import { Sprig } from "./Sprig.tsx";
@@ -16,14 +15,12 @@ export function Invitation({
   uploaderName,
   named,
   connected,
-  intro,
 }: {
   copies: { tarde: MomentCopy | null; escapada: MomentCopy | null } | null | undefined;
   isAdmin: boolean;
   uploaderName: string;
   named: boolean;
   connected: boolean;
-  intro?: ReactNode;
 }) {
   return (
     <>
@@ -41,16 +38,6 @@ export function Invitation({
           Un fin de semana para estar juntas, reírnos y despedirla despacio.
         </p>
       </header>
-
-      {intro}
-
-      <nav className="day-nav" aria-label="Itinerario">
-        {moments.map((moment) => (
-          <a key={moment.id} href={`#${moment.id}`}>
-            {moment.nav}
-          </a>
-        ))}
-      </nav>
 
       <section className="timeline" aria-label="Momentos del finde">
         {moments.map((moment) => {

@@ -147,27 +147,6 @@ h1 {
   margin: 22px auto 0;
 }
 
-.day-nav {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 14px 22px;
-  margin: 36px 0 8px;
-}
-
-.day-nav a {
-  text-decoration: none;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  font-size: 0.78rem;
-  color: var(--rose-deep);
-  border-bottom: 1px solid transparent;
-}
-
-.day-nav a:hover {
-  border-bottom-color: var(--leaf);
-}
-
 .organizer {
   margin: 22px auto 0;
   max-width: 36rem;
@@ -178,7 +157,7 @@ h1 {
 
 .timeline {
   position: relative;
-  margin-top: 18px;
+  margin-top: 48px;
 }
 
 .moment {
@@ -781,10 +760,6 @@ h2 {
 
   .thumbs {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .day-nav {
-    display: none;
   }
 
   .app-shell {

@@ -5,7 +5,6 @@ import { api } from "../convex/_generated/api";
 import { AdminPanel } from "./components/AdminPanel.tsx";
 import { Gate } from "./components/Gate.tsx";
 import { Invitation } from "./components/Invitation.tsx";
-import { NameForm } from "./components/NameForm.tsx";
 import { Opening } from "./components/Opening.tsx";
 import { Profile } from "./components/Profile.tsx";
 import { Sprig } from "./components/Sprig.tsx";
@@ -137,15 +136,6 @@ function AuthedApp() {
             uploaderName={viewer.displayName}
             named={viewer.hasName}
             connected
-            intro={
-              viewer.hasName ? null : (
-                <NameForm
-                  profileName={viewer.profileName}
-                  initialFirst={viewer.firstName}
-                  initialLast={viewer.lastName}
-                />
-              )
-            }
           />
         )}
         {current === "perfil" && (
@@ -158,6 +148,7 @@ function AuthedApp() {
             lastName={viewer.lastName}
             isBride={viewer.isBride}
             isAdmin={viewer.isAdmin}
+            hasName={viewer.hasName}
           />
         )}
         {current === "panel" && viewer.isAdmin && (

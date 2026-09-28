@@ -10,6 +10,7 @@ export function Profile({
   lastName,
   isBride,
   isAdmin,
+  hasName,
 }: {
   email: string;
   image: string;
@@ -19,6 +20,7 @@ export function Profile({
   lastName: string;
   isBride: boolean;
   isAdmin: boolean;
+  hasName: boolean;
 }) {
   const title = displayName || profileName || "Tu perfil";
   const initial = title.trim().charAt(0).toUpperCase() || "?";
@@ -49,7 +51,7 @@ export function Profile({
         )}
       </header>
       <NameForm
-        intent="edit"
+        intent={hasName ? "edit" : "confirm"}
         profileName={profileName}
         initialFirst={firstName}
         initialLast={lastName}
