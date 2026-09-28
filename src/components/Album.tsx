@@ -5,6 +5,8 @@ import type { Id } from "../../convex/_generated/dataModel";
 import type { MomentId } from "../data/itinerary.ts";
 import { prepareImage } from "../lib/prepareImage.ts";
 import { Lightbox } from "./Lightbox.tsx";
+import { said } from "../lib/said.ts";
+import { useToast } from "./Toaster.tsx";
 
 const MAX_BATCH = 30;
 const PREVIEW_COUNT = 6;
@@ -113,10 +115,10 @@ function AlbumLive({
   const generateUploadUrl = useMutation(api.photos.generateUploadUrl);
   const savePhoto = useMutation(api.photos.savePhoto);
   const removePhoto = useMutation(api.photos.remove);
+  const toast = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState<Photo | null>(null);
   const close = useCallback(() => setOpen(null), []);
@@ -128,7 +130,7 @@ function AlbumLive({
         /\.(heic|heif|jpe?g|png|webp|gif)$/i.test(file.name),
     );
     if (images.length === 0) {
-      setMessage("Elegí fotos, no otros archivos.");
+      toast.error("Elegí fotos, no otros archivos.");
       return;
     }
     const batch = images.slice(0, MAX_BATCH);
@@ -136,7 +138,6 @@ function AlbumLive({
     setBusy(true);
     let failed = 0;
     for (let index = 0; index < batch.length; index += 1) {
-      setMessage(`Subiendo ${index + 1} de ${batch.length}…`);
       try {
         const file = await prepareImage(batch[index]);
         const uploadUrl = await generateUploadUrl({ itinerarySlug: slug });
@@ -161,15 +162,15 @@ function AlbumLive({
     }
     setBusy(false);
     if (failed > 0) {
-      setMessage(
+      toast.error(
         failed === 1
           ? "Una foto no se pudo subir. Probá de nuevo."
           : `${failed} fotos no se pudieron subir.`,
       );
     } else if (skipped > 0) {
-      setMessage(`Subí ${batch.length}. El resto, de a ${MAX_BATCH}.`);
+      toast.note(`Subí ${batch.length}. El resto, de a ${MAX_BATCH}.`);
     } else {
-      setMessage("Listo. Ya están en el álbum.");
+      toast.ok("Listo. Ya están en el álbum.");
     }
   }
 
@@ -179,13 +180,17 @@ function AlbumLive({
     void handleFiles([...event.dataTransfer.files]);
   }
 
-  async function onRemove(photo: Photo) {
-    const confirmed = window.confirm(
-      "¿Sacamos esta foto del álbum y de Drive?",
-    );
-    if (!confirmed) return;
-    await removePhoto({ photoId: photo._id });
-    if (open?._id === photo._id) setOpen(null);
+  function onRemove(photo: Photo) {
+    toast.ask("¿Sacamos esta foto del álbum y de Drive?", () => {
+      void removePhoto({ photoId: photo._id })
+        .then(() => {
+          if (open?._id === photo._id) setOpen(null);
+          toast.ok("Foto sacada.");
+        })
+        .catch((caught: unknown) => {
+          toast.error(said(caught, "No se pudo sacar la foto."));
+        });
+    }, "Sacar", "Dejarla");
   }
 
   const visible = expanded ? photos : photos?.slice(0, PREVIEW_COUNT);
@@ -237,9 +242,6 @@ function AlbumLive({
         <span>o arrastralas acá</span>
       </div>
       )}
-      <p className="album-status" aria-live="polite">
-        {message}
-      </p>
       {photos === undefined ? (
         <p className="album-note">Cargando el álbum…</p>
       ) : photos.length === 0 ? (

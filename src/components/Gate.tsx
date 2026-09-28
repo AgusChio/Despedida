@@ -1,21 +1,22 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useState } from "react";
 import { Sprig } from "./Sprig.tsx";
+import { said } from "../lib/said.ts";
+import { useToast } from "./Toaster.tsx";
 
 export function Gate() {
   const { signIn } = useAuthActions();
+  const toast = useToast();
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function enter() {
     setPending(true);
-    setError(null);
     try {
       const home = new URL(import.meta.env.BASE_URL, window.location.origin).href;
       await signIn("google", { redirectTo: home });
-    } catch {
+    } catch (caught) {
       setPending(false);
-      setError("No se pudo abrir Google. Probá de nuevo en un momento.");
+      toast.error(said(caught, "No se pudo abrir Google. Probá de nuevo en un momento."));
     }
   }
 
@@ -41,7 +42,6 @@ export function Gate() {
       >
         {pending ? "Abriendo Google…" : "Entrar con Gmail"}
       </button>
-      {error && <p className="form-error">{error}</p>}
     </main>
   );
 }

@@ -1,6 +1,8 @@
 import { useMutation } from "convex/react";
 import { useState, type FormEvent } from "react";
 import { api } from "../../convex/_generated/api";
+import { said } from "../lib/said.ts";
+import { useToast } from "./Toaster.tsx";
 
 function seedName(profileName: string, first: string, last: string) {
   if (first.trim() || last.trim()) return { first, last };
@@ -23,25 +25,21 @@ export function NameForm({
   intent?: "confirm" | "edit";
 }) {
   const saveName = useMutation(api.users.saveName);
+  const toast = useToast();
   const seeded = seedName(profileName, initialFirst, initialLast);
   const [firstName, setFirstName] = useState(seeded.first);
   const [lastName, setLastName] = useState(seeded.last);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setPending(true);
-    setError(null);
     try {
       await saveName({ firstName, lastName });
+      toast.ok(intent === "edit" ? "Quedó tu nombre." : "Listo. Ya podés ver el finde.");
       onDone?.();
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "No se pudo guardar el nombre.",
-      );
+      toast.error(said(caught, "No se pudo guardar el nombre."));
     } finally {
       setPending(false);
     }
@@ -75,7 +73,6 @@ export function NameForm({
             onChange={(event) => setLastName(event.target.value)}
           />
         </label>
-        {error && <p className="form-error">{error}</p>}
         <button type="submit" className="gmail" disabled={pending}>
           {pending ? "Guardando…" : intent === "edit" ? "Guardar" : "Listo"}
         </button>

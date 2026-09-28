@@ -15,6 +15,7 @@ export function TabBar({
   image,
   onMoment,
   onNavigate,
+  onSignOut,
 }: {
   page: Page;
   moment: MomentId | null;
@@ -22,6 +23,7 @@ export function TabBar({
   image: string;
   onMoment: (id: MomentId) => void;
   onNavigate: (page: Page) => void;
+  onSignOut: () => void;
 }) {
   return (
     <nav className="tabbar" aria-label="Navegación">
@@ -58,6 +60,10 @@ export function TabBar({
         )}
         <span>Vos</span>
       </button>
+      <button type="button" className="tab-leave" onClick={onSignOut}>
+        <IconLeave />
+        <span>Salir</span>
+      </button>
     </nav>
   );
 }
@@ -78,6 +84,16 @@ function IconUser() {
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="8" r="3.2" />
       <path d="M5.5 19.2c1.2-3 3.5-4.4 6.5-4.4s5.3 1.4 6.5 4.4" />
+    </svg>
+  );
+}
+
+function IconLeave() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M10 6H6.8A1.8 1.8 0 0 0 5 7.8v8.4A1.8 1.8 0 0 0 6.8 18H10" />
+      <path d="M10.5 12H19" />
+      <path d="M16 8.6 19.4 12 16 15.4" />
     </svg>
   );
 }

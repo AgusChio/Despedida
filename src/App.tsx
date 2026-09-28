@@ -10,6 +10,7 @@ import { Opening } from "./components/Opening.tsx";
 import { Profile } from "./components/Profile.tsx";
 import { Sprig } from "./components/Sprig.tsx";
 import { TabBar, type Page } from "./components/TabBar.tsx";
+import { useToast } from "./components/Toaster.tsx";
 import type { MomentId } from "./data/itinerary.ts";
 
 export default function App({ connected }: { connected: boolean }) {
@@ -38,6 +39,7 @@ function readMoment(): MomentId | null {
 function AuthedApp() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { signOut } = useAuthActions();
+  const toast = useToast();
   const viewer = useQuery(api.users.viewer, isAuthenticated ? {} : "skip");
   const copies = useQuery(api.plan.copies, isAuthenticated ? {} : "skip");
   const arm = useMutation(api.plan.arm);
@@ -107,8 +109,7 @@ function AuthedApp() {
   }
 
   function leave() {
-    const confirmed = window.confirm("¿Salís de la invitación?");
-    if (confirmed) void signOut();
+    toast.ask("¿Salís de la invitación?", () => void signOut(), "Salir", "Quedarme");
   }
 
   function goMoment(id: MomentId) {
@@ -157,7 +158,6 @@ function AuthedApp() {
             lastName={viewer.lastName}
             isBride={viewer.isBride}
             isAdmin={viewer.isAdmin}
-            onSignOut={leave}
           />
         )}
         {current === "panel" && viewer.isAdmin && (
@@ -179,6 +179,7 @@ function AuthedApp() {
         image={viewer.image}
         onMoment={goMoment}
         onNavigate={go}
+        onSignOut={leave}
       />
     </div>
   );

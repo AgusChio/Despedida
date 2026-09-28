@@ -2,11 +2,13 @@ import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { MomentId } from "../data/itinerary.ts";
+import { said } from "../lib/said.ts";
+import { useToast } from "./Toaster.tsx";
 
 export function Rsvp({ slug, named }: { slug: MomentId; named: boolean }) {
   const people = useQuery(api.rsvp.list, { itinerarySlug: slug });
   const answer = useMutation(api.rsvp.answer);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [pending, setPending] = useState(false);
   const mine = people?.find((person) => person.mine);
   const coming = people?.filter((person) => person.going) ?? [];
@@ -14,13 +16,11 @@ export function Rsvp({ slug, named }: { slug: MomentId; named: boolean }) {
 
   async function choose(going: boolean) {
     setPending(true);
-    setError(null);
     try {
       await answer({ itinerarySlug: slug, going });
+      toast.ok(going ? "Anotado, venís." : "Anotado, no podés.");
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "No se pudo guardar.",
-      );
+      toast.error(said(caught, "No se pudo guardar."));
     } finally {
       setPending(false);
     }
@@ -50,7 +50,6 @@ export function Rsvp({ slug, named }: { slug: MomentId; named: boolean }) {
       {!named && (
         <p className="album-note">Confirmá tu nombre para responder.</p>
       )}
-      {error && <p className="form-error">{error}</p>}
       {people && people.length === 0 && (
         <p className="album-note">Todavía nadie contestó.</p>
       )}

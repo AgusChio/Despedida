@@ -10,7 +10,6 @@ export function Profile({
   lastName,
   isBride,
   isAdmin,
-  onSignOut,
 }: {
   email: string;
   image: string;
@@ -20,7 +19,6 @@ export function Profile({
   lastName: string;
   isBride: boolean;
   isAdmin: boolean;
-  onSignOut: () => void;
 }) {
   const title = displayName || profileName || "Tu perfil";
   const initial = title.trim().charAt(0).toUpperCase() || "?";
@@ -56,9 +54,6 @@ export function Profile({
         initialFirst={firstName}
         initialLast={lastName}
       />
-      <button type="button" className="text-button sign-out" onClick={onSignOut}>
-        Salir
-      </button>
     </>
   );
 }

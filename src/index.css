@@ -274,13 +274,11 @@ h2 {
 }
 
 .album-head p,
-.album-note,
-.album-status {
+.album-note {
   margin: 0;
 }
 
-.album-note,
-.album-status {
+.album-note {
   color: var(--muted);
   font-size: 0.95rem;
 }
@@ -354,11 +352,6 @@ h2 {
   height: 1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
-}
-
-.album-status {
-  min-height: 1.4em;
-  margin-top: 10px;
 }
 
 .thumbs {
@@ -860,6 +853,10 @@ h2 {
   color: var(--rose-deep);
 }
 
+.tabbar .tab-leave {
+  color: var(--rose-deep);
+}
+
 .tabbar svg {
   width: 22px;
   height: 22px;
@@ -1007,15 +1004,71 @@ h2 {
   transform: rotate(225deg) translateY(-1px);
 }
 
-.sign-out {
-  display: block;
-  margin: 8px auto 0;
-  border: 0;
+.toaster {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(420px, calc(100% - 24px));
+  pointer-events: none;
+}
+
+body:has(.tabbar) .toaster {
+  bottom: calc(102px + env(safe-area-inset-bottom));
+}
+
+.toast {
+  pointer-events: auto;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(193, 123, 136, 0.4);
+  border-radius: 18px;
+  background: rgba(251, 248, 244, 0.97);
+  box-shadow: 0 16px 40px rgba(90, 60, 55, 0.12);
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.toast p {
+  margin: 0;
+}
+
+.toast-ok {
+  border-color: rgba(125, 154, 120, 0.55);
+  background: rgba(229, 240, 226, 0.96);
+}
+
+.toast-error {
+  border-color: rgba(164, 93, 107, 0.5);
+  background: rgba(246, 228, 232, 0.97);
+}
+
+.toast-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.toast-actions button {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
   background: transparent;
-  color: var(--rose-deep);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.toast-actions .toast-yes {
+  border-color: rgba(193, 123, 136, 0.55);
+  background: var(--blush);
+  color: var(--rose-deep);
 }
 
 .rsvp-people {

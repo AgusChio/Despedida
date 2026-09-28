@@ -1,23 +1,31 @@
 import { useMutation, useQuery } from "convex/react";
-import { useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { said } from "../lib/said.ts";
+import { useToast } from "./Toaster.tsx";
 
 export function AdminPanel() {
   const guests = useQuery(api.users.guests);
   const connection = useQuery(api.photos.connection);
   const setBride = useMutation(api.users.setBride);
   const clearBride = useMutation(api.users.clearBride);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function choose(userId: Id<"users">) {
-    setError(null);
     try {
       await setBride({ userId });
+      toast.ok("Quedó marcada como novia.");
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "No se pudo marcar a la novia.",
-      );
+      toast.error(said(caught, "No se pudo marcar a la novia."));
+    }
+  }
+
+  async function forget() {
+    try {
+      await clearBride();
+      toast.ok("Ya no está marcada como novia.");
+    } catch (caught) {
+      toast.error(said(caught, "No se pudo quitar a la novia."));
     }
   }
 
@@ -30,7 +38,6 @@ export function AdminPanel() {
       <p className="album-note">
         Las invitadas ven el plan. La actividad del sábado y la de la escapada solo las ves vos.
       </p>
-      {error && <p className="form-error">{error}</p>}
       <ul className="guests">
         {guests?.map((guest) => (
           <li key={guest.id}>
@@ -44,7 +51,7 @@ export function AdminPanel() {
               <button
                 type="button"
                 className="pill pill-button"
-                onClick={() => void clearBride()}
+                onClick={() => void forget()}
               >
                 Novia · quitar
               </button>
