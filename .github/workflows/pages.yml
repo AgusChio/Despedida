@@ -24,10 +24,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Publicar funciones en Convex de producción
+        run: npx convex deploy -y
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
       - run: npm run build
         env:
           VITE_BASE: /Despedida/
-          VITE_CONVEX_URL: https://neat-boar-633.convex.cloud
+          VITE_CONVEX_URL: https://posh-elephant-700.convex.cloud
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
