@@ -1,0 +1,64 @@
+import { Sprig } from "./Sprig.tsx";
+import { NameForm } from "./NameForm.tsx";
+
+export function Profile({
+  email,
+  image,
+  displayName,
+  profileName,
+  firstName,
+  lastName,
+  isBride,
+  isAdmin,
+  onSignOut,
+}: {
+  email: string;
+  image: string;
+  displayName: string;
+  profileName: string;
+  firstName: string;
+  lastName: string;
+  isBride: boolean;
+  isAdmin: boolean;
+  onSignOut: () => void;
+}) {
+  const title = displayName || profileName || "Tu perfil";
+  const initial = title.trim().charAt(0).toUpperCase() || "?";
+
+  return (
+    <>
+      <header className="hero">
+        <Sprig />
+        {image ? (
+          <img
+            className="avatar"
+            src={image}
+            alt=""
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <span className="avatar avatar-fallback" aria-hidden="true">
+            {initial}
+          </span>
+        )}
+        <p className="eyebrow">Tu Gmail</p>
+        <h1 className="profile-name">{title}</h1>
+        <p className="profile-mail">{email}</p>
+        {(isBride || isAdmin) && (
+          <p className="profile-role">
+            {isBride ? "Novia" : "Organizás la despedida"}
+          </p>
+        )}
+      </header>
+      <NameForm
+        intent="edit"
+        profileName={profileName}
+        initialFirst={firstName}
+        initialLast={lastName}
+      />
+      <button type="button" className="text-button sign-out" onClick={onSignOut}>
+        Salir
+      </button>
+    </>
+  );
+}
