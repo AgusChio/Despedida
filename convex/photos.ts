@@ -80,13 +80,22 @@ export const getInternal = internalQuery({
   },
 });
 
+function canUpload(
+  isAdmin: boolean,
+  moment: "tarde" | "escapada" | "cafe",
+  now = Date.now(),
+) {
+  return uploadsOpen(moment, now) || (isAdmin && moment === "tarde");
+}
+
 export const windows = query({
   args: {},
-  handler: async () => {
+  handler: async (ctx) => {
+    const user = await currentUser(ctx);
     const now = Date.now();
     return {
       tarde: {
-        open: uploadsOpen("tarde", now),
+        open: canUpload(user?.isAdmin === true, "tarde", now),
         from: UPLOAD_OPEN_LABEL.tarde,
       },
       escapada: {
@@ -106,7 +115,7 @@ export const generateUploadUrl = mutation({
   handler: async (ctx, args) => {
     const user = await currentUser(ctx);
     if (!user?.hasName) throw new Error("Primero poné tu nombre y apellido.");
-    if (!uploadsOpen(args.itinerarySlug)) {
+    if (!canUpload(user.isAdmin, args.itinerarySlug)) {
       throw new Error(
         `Las fotos se abren ${UPLOAD_OPEN_LABEL[args.itinerarySlug]}.`,
       );
@@ -125,7 +134,7 @@ export const savePhoto = mutation({
   handler: async (ctx, args) => {
     const user = await currentUser(ctx);
     if (!user?.hasName) throw new Error("Primero poné tu nombre y apellido.");
-    if (!uploadsOpen(args.itinerarySlug)) {
+    if (!canUpload(user.isAdmin, args.itinerarySlug)) {
       throw new Error(
         `Las fotos se abren ${UPLOAD_OPEN_LABEL[args.itinerarySlug]}.`,
       );
