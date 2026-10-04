@@ -653,6 +653,71 @@ h2 {
   color: var(--rose-deep);
 }
 
+.exam {
+  margin-top: 22px;
+  padding-top: 8px;
+}
+
+.exam h3,
+.exam h4 {
+  margin: 6px 0 0;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-style: italic;
+}
+
+.exam h3 {
+  font-size: 1.8rem;
+}
+
+.exam-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.exam-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.exam-form span,
+.exam-results li span {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.exam-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: transparent;
+  resize: vertical;
+}
+
+.exam-form .gmail {
+  width: auto;
+  justify-self: start;
+}
+
+.exam-results {
+  margin-top: 22px;
+}
+
+.exam-results article {
+  margin-top: 14px;
+}
+
+.exam-results ol {
+  margin: 8px 0 0;
+  padding-left: 1.1rem;
+}
+
+.exam-results li {
+  margin-top: 8px;
+}
+
 .secret-note {
   margin: 10px 0 0;
   color: var(--leaf);

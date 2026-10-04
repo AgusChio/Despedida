@@ -1,4 +1,5 @@
 import { Album } from "./Album.tsx";
+import { Exam } from "./Exam.tsx";
 import { Rsvp } from "./Rsvp.tsx";
 import { moments } from "../data/itinerary.ts";
 
@@ -74,6 +75,9 @@ export function Invitation({
                       <li key={detail}>{detail}</li>
                     ))}
                   </ul>
+                )}
+                {moment.id === "tarde" && (
+                  <Exam isBride={isBride} isAdmin={isAdmin} named={named} />
                 )}
                 <Rsvp slug={moment.id} named={named} />
                 <Album

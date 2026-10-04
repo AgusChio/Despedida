@@ -40,6 +40,11 @@ export default defineSchema({
     driveError: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_itinerary", ["itinerarySlug"]),
+  examAnswers: defineTable({
+    userId: v.id("users"),
+    answers: v.array(v.string()),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
   rsvps: defineTable({
     userId: v.id("users"),
     itinerarySlug: v.union(
