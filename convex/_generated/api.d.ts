@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as drive from "../drive.js";
+import type * as exam from "../exam.js";
 import type * as helpers from "../helpers.js";
 import type * as http from "../http.js";
 import type * as photos from "../photos.js";
@@ -26,6 +27,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   drive: typeof drive;
+  exam: typeof exam;
   helpers: typeof helpers;
   http: typeof http;
   photos: typeof photos;

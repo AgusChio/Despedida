@@ -2,7 +2,14 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { currentUser, displayNameOf } from "./helpers";
 
-const QUESTION_COUNT = 5;
+const QUESTION_COUNT = 6;
+const TAG_CORRECT = "Las corta";
+const TAG_OPTIONS = ["Las deja", "Le pone cinta hipoalergénica"];
+
+function validTag(answer: string) {
+  if (answer === TAG_CORRECT || TAG_OPTIONS.includes(answer)) return true;
+  return answer.startsWith("Otra: ") && answer.slice(6).trim().length >= 2;
+}
 
 function cleanAnswer(value: string) {
   return value.trim().replace(/\s+/g, " ").slice(0, 240);
@@ -35,6 +42,7 @@ export const results = query({
           userId: row.userId,
           displayName: displayNameOf(person) || person.name?.trim() || "Invitada",
           answers: row.answers,
+          knowsHer: row.answers.at(-1) === TAG_CORRECT,
         };
       }),
     );
@@ -52,11 +60,12 @@ export const save = mutation({
     if (user.isBride) throw new Error("Este examen es para las invitadas.");
     if (!user.hasName) throw new Error("Primero confirmá tu nombre y apellido.");
     if (args.answers.length !== QUESTION_COUNT) {
-      throw new Error("Contestá las cinco preguntas.");
+      throw new Error("Contestá todas las preguntas.");
     }
     const answers = args.answers.map(cleanAnswer);
-    if (answers.some((answer) => answer.length < 2)) {
-      throw new Error("Contestá las cinco preguntas.");
+    const tag = answers.at(-1) ?? "";
+    if (answers.slice(0, -1).some((answer) => answer.length < 2) || !validTag(tag)) {
+      throw new Error("Contestá todas las preguntas.");
     }
     const existing = await ctx.db
       .query("examAnswers")
