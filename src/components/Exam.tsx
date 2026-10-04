@@ -1,65 +1,85 @@
 import { useMutation, useQuery } from "convex/react";
 import { useState, type FormEvent } from "react";
 import { api } from "../../convex/_generated/api";
-import { examQuestions, tagOptions, tagQuestion } from "../data/exam.ts";
+import { examBank } from "../data/exam.ts";
 import { said } from "../lib/said.ts";
 import { useToast } from "./Toaster.tsx";
 
-const total = examQuestions.length + 1;
-
 function blank() {
-  return Array.from({ length: total }, () => "");
+  return Array.from({ length: examBank.length }, () => "");
 }
 
 export function Exam({ isBride, isAdmin, named }: { isBride: boolean; isAdmin: boolean; named: boolean }) {
-  if (isBride) {
-    return (
-      <section className="exam" aria-label="Examen sorpresa">
-        <p className="eyebrow">Solo en esta tarde</p>
-        <h3>¿Quién conoce más a la novia?</h3>
-        <p className="moment-lead">Las chicas lo contestan. Vos no.</p>
-      </section>
-    );
-  }
+  if (isBride) return <BrideExam named={named} />;
   return <GuestExam isAdmin={isAdmin} named={named} />;
 }
 
-function GuestExam({ isAdmin, named }: { isAdmin: boolean; named: boolean }) {
+function BrideExam({ named }: { named: boolean }) {
   const saved = useQuery(api.exam.mine);
-  const results = useQuery(api.exam.results, isAdmin ? {} : "skip");
   const save = useMutation(api.exam.save);
   const toast = useToast();
   const [draft, setDraft] = useState<string[] | null>(null);
   const [pending, setPending] = useState(false);
-  const answers =
-    draft ??
-    (saved && saved.length > 0 ? blank().map((item, index) => saved[index] ?? item) : blank());
-  const tag = answers[examQuestions.length] ?? "";
-  const other = tag.startsWith("Otra:") ? tag.slice(5).trim() : "";
-  const picked = tag.startsWith("Otra") ? "Otra" : tag;
+  const answers = draft ?? (saved && saved.length === examBank.length ? saved : blank());
+  const done = saved !== undefined && saved.length === examBank.length;
 
-  if (saved === undefined) {
-    return (
-      <section className="exam" aria-label="Examen sorpresa">
-        <p className="album-note">Cargando el examen…</p>
-      </section>
-    );
-  }
-
-  function setAnswer(index: number, value: string) {
-    setDraft(answers.map((answer, item) => (item === index ? value : answer)));
-  }
-
-  function setTag(option: string) {
-    const value = option === "Otra" ? `Otra: ${other}` : option;
-    setAnswer(examQuestions.length, value);
-  }
+  if (saved === undefined) return <Loading />;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setPending(true);
     try {
       await save({ answers });
+      setDraft(null);
+      toast.ok(done ? "Listo. Quedaron los cambios." : "Listo. Ya pueden contestar las chicas.");
+    } catch (caught) {
+      toast.error(said(caught, "No se pudieron guardar las respuestas."));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <section className="exam" aria-label="Examen sorpresa">
+      <p className="eyebrow">Solo en esta tarde</p>
+      <h3>¿Quién conoce más a la novia?</h3>
+      <p className="moment-lead">
+        Estas las respondés vos. Podés cambiarlas cuando quieras. Cuando estén las veinte, las chicas
+        pueden contestar.
+      </p>
+      <ChoiceForm
+        answers={answers}
+        named={named}
+        pending={pending}
+        submitLabel={done ? "Guardar cambios" : "Guardar respuestas"}
+        onChange={(index, value) =>
+          setDraft(answers.map((answer, item) => (item === index ? value : answer)))
+        }
+        onSubmit={(event) => void submit(event)}
+      />
+    </section>
+  );
+}
+
+function GuestExam({ isAdmin, named }: { isAdmin: boolean; named: boolean }) {
+  const open = useQuery(api.exam.open);
+  const saved = useQuery(api.exam.mine);
+  const results = useQuery(api.exam.results, isAdmin ? {} : "skip");
+  const save = useMutation(api.exam.save);
+  const toast = useToast();
+  const [draft, setDraft] = useState<string[] | null>(null);
+  const [pending, setPending] = useState(false);
+  const answers = draft ?? (saved && saved.length === examBank.length ? saved : blank());
+  const done = saved !== undefined && saved.length === examBank.length;
+
+  if (open === undefined || saved === undefined) return <Loading />;
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setPending(true);
+    try {
+      await save({ answers });
+      setDraft(null);
       toast.ok("Listo. Quedó tu examen.");
     } catch (caught) {
       toast.error(said(caught, "No se pudo guardar el examen."));
@@ -68,88 +88,123 @@ function GuestExam({ isAdmin, named }: { isAdmin: boolean; named: boolean }) {
     }
   }
 
-  const closest = results?.filter((person) => person.knowsHer) ?? [];
-  const rest = results?.filter((person) => !person.knowsHer) ?? [];
+  const ranking = results?.ranking ?? [];
+  const top = ranking[0]?.score ?? 0;
+  const closest = ranking.filter((person) => person.score === top && top > 0);
 
   return (
     <section className="exam" aria-label="Examen sorpresa">
       <p className="eyebrow">Solo en esta tarde</p>
       <h3>¿Quién conoce más a la novia?</h3>
-      <p className="moment-lead">Sobre Caro. Las respuestas las ve la organizadora.</p>
-      <form className="exam-form" onSubmit={(event) => void submit(event)}>
-        {examQuestions.map((question, index) => (
-          <label key={question}>
-            <span>{question}</span>
-            <textarea
-              value={answers[index] ?? ""}
-              required
-              rows={2}
-              disabled={!named || pending}
-              onChange={(event) => setAnswer(index, event.target.value)}
-            />
-          </label>
-        ))}
-        <fieldset className="exam-choices" disabled={!named || pending}>
-          <legend>{tagQuestion}</legend>
-          {tagOptions.map((option) => (
-            <label key={option}>
-              <input
-                type="radio"
-                name="etiqueta"
-                value={option}
-                checked={picked === option}
-                required
-                onChange={() => setTag(option)}
-              />
-              {option}
-            </label>
-          ))}
-          {picked === "Otra" && (
-            <textarea
-              value={other}
-              required
-              rows={2}
-              placeholder="Contá qué hace"
-              onChange={(event) => setAnswer(examQuestions.length, `Otra: ${event.target.value}`)}
-            />
-          )}
-        </fieldset>
-        {!named && <p className="album-note">Confirmá tu nombre para contestarlo.</p>}
-        <button type="submit" className="gmail" disabled={!named || pending}>
-          {pending ? "Guardando…" : saved && saved.length > 0 ? "Guardar de nuevo" : "Entregar"}
-        </button>
-      </form>
+      {open ? (
+        <>
+          <p className="moment-lead">Elegí lo que haría Caro. Las respuestas las ve la organizadora.</p>
+          <ChoiceForm
+            answers={answers}
+            named={named}
+            pending={pending}
+            submitLabel={done ? "Guardar de nuevo" : "Entregar"}
+            onChange={(index, value) =>
+              setDraft(answers.map((answer, item) => (item === index ? value : answer)))
+            }
+            onSubmit={(event) => void submit(event)}
+          />
+        </>
+      ) : (
+        <p className="moment-lead">
+          Caro elige primero las respuestas. Cuando termine las veinte, se abre y pueden contestar.
+        </p>
+      )}
       {isAdmin && (
         <div className="exam-results">
           <p className="eyebrow">Quién conoce más a la novia</p>
-          {results && results.length === 0 && <p className="album-note">Todavía nadie contestó.</p>}
+          {!results?.ready && <p className="album-note">Caro todavía no terminó las suyas.</p>}
+          {results?.ready && ranking.length === 0 && <p className="album-note">Todavía nadie contestó.</p>}
           {closest.length > 0 && (
-            <p className="moment-lead">{closest.map((person) => person.displayName).join(", ")}.</p>
-          )}
-          {rest.length > 0 && closest.length > 0 && (
-            <p className="album-note">
-              También contestaron: {rest.map((person) => person.displayName).join(", ")}.
+            <p className="moment-lead">
+              {closest.map((person) => person.displayName).join(", ")} · {top} de {examBank.length}.
             </p>
           )}
-          {results?.map((person) => (
+          {ranking.map((person) => (
             <article key={person.userId}>
-              <h4>{person.displayName}</h4>
+              <h4>
+                {person.displayName}
+                <span className="exam-score">
+                  {person.score} de {examBank.length}
+                </span>
+              </h4>
               <ol>
-                {examQuestions.map((question, index) => (
-                  <li key={question}>
-                    <span>{question}</span>
-                    {person.answers[index]}
-                  </li>
-                ))}
-                <li>
-                  <span>{tagQuestion}</span>
-                  {person.answers[examQuestions.length]}
-                </li>
+                {examBank.map((item, index) => {
+                  const hers = results?.brideAnswers[index];
+                  const picked = person.answers[index];
+                  return (
+                    <li key={item.question}>
+                      <span>
+                        {index + 1}. {item.question}
+                      </span>
+                      {picked}
+                      {picked !== hers && <em className="exam-miss">Caro: {hers}</em>}
+                    </li>
+                  );
+                })}
               </ol>
             </article>
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+function ChoiceForm({
+  answers,
+  named,
+  pending,
+  submitLabel,
+  onChange,
+  onSubmit,
+}: {
+  answers: string[];
+  named: boolean;
+  pending: boolean;
+  submitLabel: string;
+  onChange: (index: number, value: string) => void;
+  onSubmit: (event: FormEvent) => void;
+}) {
+  return (
+    <form className="exam-form" onSubmit={onSubmit}>
+      {examBank.map((item, index) => (
+        <fieldset key={item.question} className="exam-choices" disabled={!named || pending}>
+          <legend>
+            {index + 1}. {item.question}
+          </legend>
+          {item.options.map((option) => (
+            <label key={option}>
+              <input
+                type="radio"
+                name={`pregunta-${index}`}
+                value={option}
+                checked={answers[index] === option}
+                required
+                onChange={() => onChange(index, option)}
+              />
+              {option}
+            </label>
+          ))}
+        </fieldset>
+      ))}
+      {!named && <p className="album-note">Confirmá tu nombre para contestarlo.</p>}
+      <button type="submit" className="gmail" disabled={!named || pending}>
+        {pending ? "Guardando…" : submitLabel}
+      </button>
+    </form>
+  );
+}
+
+function Loading() {
+  return (
+    <section className="exam" aria-label="Examen sorpresa">
+      <p className="album-note">Cargando el examen…</p>
     </section>
   );
 }

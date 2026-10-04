@@ -740,6 +740,21 @@ h2 {
   margin-top: 8px;
 }
 
+.exam-score {
+  display: block;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-style: normal;
+  letter-spacing: 0.04em;
+}
+
+.exam-miss {
+  display: block;
+  color: var(--rose-deep);
+  font-size: 0.85rem;
+}
+
 .secret-note {
   margin: 10px 0 0;
   color: var(--leaf);
