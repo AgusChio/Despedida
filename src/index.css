@@ -1071,6 +1071,48 @@ h2 {
   line-height: 0.9;
 }
 
+.preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--blush);
+}
+
+.preview-bar p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.preview-bar button,
+.preview-toggle {
+  flex: none;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--rose-deep);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.preview-toggle {
+  margin-top: 14px;
+  background: var(--blush);
+}
+
+@media (max-width: 720px) {
+  .preview-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 .profile-mail,
 .profile-role {
   margin: 10px 0 0;

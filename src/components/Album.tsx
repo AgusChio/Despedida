@@ -45,12 +45,14 @@ export function Album({
   slug,
   connected,
   isAdmin,
+  preview = false,
   uploaderName,
   named,
 }: {
   slug: MomentId;
   connected: boolean;
   isAdmin: boolean;
+  preview?: boolean;
   uploaderName: string;
   named: boolean;
 }) {
@@ -60,6 +62,7 @@ export function Album({
         <AlbumLive
           slug={slug}
           isAdmin={isAdmin}
+          preview={preview}
           uploaderName={uploaderName}
           named={named}
         />
@@ -97,11 +100,13 @@ function AlbumOffline() {
 function AlbumLive({
   slug,
   isAdmin,
+  preview,
   uploaderName,
   named,
 }: {
   slug: MomentId;
   isAdmin: boolean;
+  preview: boolean;
   uploaderName: string;
   named: boolean;
 }) {
@@ -110,7 +115,7 @@ function AlbumLive({
     | undefined;
   const windows = useQuery(api.photos.windows);
   const windowForMoment = windows?.[slug];
-  const uploadsOpen = windowForMoment?.open === true;
+  const uploadsOpen = (preview ? windowForMoment?.openForGuests : windowForMoment?.open) === true;
   const connection = useQuery(api.photos.connection);
   const generateUploadUrl = useMutation(api.photos.generateUploadUrl);
   const savePhoto = useMutation(api.photos.savePhoto);
@@ -289,7 +294,7 @@ function AlbumLive({
                     title="Drive no la recibió"
                   />
                 )}
-                {photo.canRemove && (
+                {!preview && photo.canRemove && (
                   <button
                     type="button"
                     className="thumb-remove"

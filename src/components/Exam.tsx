@@ -9,12 +9,22 @@ function blank() {
   return Array.from({ length: examBank.length }, () => "");
 }
 
-export function Exam({ isBride, isAdmin, named }: { isBride: boolean; isAdmin: boolean; named: boolean }) {
-  if (isBride) return <BrideExam named={named} />;
+export function Exam({
+  isBride,
+  isAdmin,
+  named,
+  preview = false,
+}: {
+  isBride: boolean;
+  isAdmin: boolean;
+  named: boolean;
+  preview?: boolean;
+}) {
+  if (isBride) return <BrideExam named={named} preview={preview} />;
   return <GuestExam isAdmin={isAdmin} named={named} />;
 }
 
-function BrideExam({ named }: { named: boolean }) {
+function BrideExam({ named, preview }: { named: boolean; preview: boolean }) {
   const saved = useQuery(api.exam.mine);
   const save = useMutation(api.exam.save);
   const toast = useToast();
@@ -27,6 +37,10 @@ function BrideExam({ named }: { named: boolean }) {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (preview) {
+      toast.note("Esto es una vista. Caro lo guarda desde su Gmail.");
+      return;
+    }
     setPending(true);
     try {
       await save({ answers });

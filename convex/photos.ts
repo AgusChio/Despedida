@@ -96,14 +96,17 @@ export const windows = query({
     return {
       tarde: {
         open: canUpload(user?.isAdmin === true, "tarde", now),
+        openForGuests: uploadsOpen("tarde", now),
         from: UPLOAD_OPEN_LABEL.tarde,
       },
       escapada: {
         open: uploadsOpen("escapada", now),
+        openForGuests: uploadsOpen("escapada", now),
         from: UPLOAD_OPEN_LABEL.escapada,
       },
       cafe: {
         open: uploadsOpen("cafe", now),
+        openForGuests: uploadsOpen("cafe", now),
         from: UPLOAD_OPEN_LABEL.cafe,
       },
     };

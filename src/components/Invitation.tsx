@@ -17,6 +17,7 @@ export function Invitation({
   copies,
   isAdmin,
   isBride,
+  preview,
   uploaderName,
   named,
   connected,
@@ -24,6 +25,7 @@ export function Invitation({
   copies: { tarde: MomentCopy | null; escapada: MomentCopy | null } | null | undefined;
   isAdmin: boolean;
   isBride: boolean;
+  preview: boolean;
   uploaderName: string;
   named: boolean;
   connected: boolean;
@@ -77,13 +79,14 @@ export function Invitation({
                   </ul>
                 )}
                 {moment.id === "tarde" && (
-                  <Exam isBride={isBride} isAdmin={isAdmin} named={named} />
+                  <Exam isBride={isBride} isAdmin={isAdmin} named={named} preview={preview} />
                 )}
                 <Rsvp slug={moment.id} named={named} />
                 <Album
                   slug={moment.id}
                   connected={connected}
                   isAdmin={isAdmin}
+                  preview={preview}
                   uploaderName={uploaderName}
                   named={named}
                 />

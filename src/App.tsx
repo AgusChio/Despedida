@@ -45,7 +45,11 @@ function AuthedApp() {
   const [moment, setMoment] = useState<MomentId | null>(readMoment);
   const [slow, setSlow] = useState(false);
   const [namedNow, setNamedNow] = useState(false);
+  const [asBride, setAsBride] = useState(
+    () => sessionStorage.getItem("despedida-ver-novia") === "1",
+  );
   const waiting = isLoading || (isAuthenticated && viewer === undefined);
+  const preview = Boolean(viewer?.isAdmin && asBride);
 
   useEffect(() => {
     if (viewer?.hasName) void arm();
@@ -146,14 +150,37 @@ function AuthedApp() {
 
   const current = page === "panel" && !viewer.isAdmin ? "inicio" : page;
 
+  function showAsBride() {
+    setAsBride(true);
+    sessionStorage.setItem("despedida-ver-novia", "1");
+    setPage("inicio");
+    setMoment("tarde");
+    if (window.location.hash !== "#tarde") window.location.hash = "#tarde";
+    window.scrollTo(0, 0);
+  }
+
+  function hideAsBride() {
+    setAsBride(false);
+    sessionStorage.removeItem("despedida-ver-novia");
+  }
+
   return (
     <div className="app-shell">
       <main className="invitation">
+        {preview && (
+          <div className="preview-bar">
+            <p>Estás viendo lo que ve Caro. Nada de esto se guarda.</p>
+            <button type="button" onClick={hideAsBride}>
+              Volver a mi vista
+            </button>
+          </div>
+        )}
         {current === "inicio" && (
           <Invitation
-            copies={copies}
-            isAdmin={viewer.isAdmin}
-            isBride={viewer.isBride}
+            copies={preview ? null : copies}
+            isAdmin={viewer.isAdmin && !preview}
+            isBride={viewer.isBride || preview}
+            preview={preview}
             uploaderName={viewer.displayName}
             named={named}
             connected
@@ -167,8 +194,11 @@ function AuthedApp() {
             profileName={viewer.profileName}
             firstName={viewer.firstName}
             lastName={viewer.lastName}
-            isBride={viewer.isBride}
-            isAdmin={viewer.isAdmin}
+            isBride={viewer.isBride || preview}
+            isAdmin={viewer.isAdmin && !preview}
+            canPreview={viewer.isAdmin}
+            previewing={preview}
+            onPreview={preview ? hideAsBride : showAsBride}
             hasName={named}
             onReady={
               viewer.hasName
@@ -195,7 +225,7 @@ function AuthedApp() {
       <TabBar
         page={current}
         moment={current === "inicio" ? moment : null}
-        isAdmin={viewer.isAdmin}
+        isAdmin={viewer.isAdmin && !preview}
         image={viewer.image}
         onMoment={goMoment}
         onNavigate={go}

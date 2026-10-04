@@ -9,6 +9,9 @@ export function Profile({
   lastName,
   isBride,
   isAdmin,
+  canPreview,
+  previewing,
+  onPreview,
   hasName,
   onReady,
 }: {
@@ -20,6 +23,9 @@ export function Profile({
   lastName: string;
   isBride: boolean;
   isAdmin: boolean;
+  canPreview: boolean;
+  previewing: boolean;
+  onPreview: () => void;
   hasName: boolean;
   onReady?: () => void;
 }) {
@@ -46,8 +52,13 @@ export function Profile({
         <p className="profile-mail">{email}</p>
         {(isBride || isAdmin) && (
           <p className="profile-role">
-            {isBride ? "Novia" : "Organizás la despedida"}
+            {previewing || (isBride && !canPreview) ? "Novia" : "Organizás la despedida"}
           </p>
+        )}
+        {canPreview && (
+          <button type="button" className="pill-button preview-toggle" onClick={onPreview}>
+            {previewing ? "Volver a mi vista" : "Ver como la novia"}
+          </button>
         )}
       </header>
       <NameForm
