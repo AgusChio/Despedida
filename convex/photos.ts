@@ -66,7 +66,7 @@ export const list = query({
         uploadedBy: photo.uploadedBy ?? null,
         driveStatus: photo.driveStatus,
         createdAt: photo.createdAt,
-        canRemove: user.isAdmin || photo.userId === user.id,
+        canRemove: user.isAdmin,
         url: await ctx.storage.getUrl(photo.storageId),
       })),
     );
@@ -165,8 +165,8 @@ export const remove = mutation({
     if (!user?.hasName) throw new Error("Tenés que entrar.");
     const photo = await ctx.db.get(args.photoId);
     if (!photo) return;
-    if (!user.isAdmin && photo.userId !== user.id) {
-      throw new Error("Solo podés quitar tus fotos.");
+    if (!user.isAdmin) {
+      throw new Error("Solo la organizadora puede quitar fotos.");
     }
     await ctx.storage.delete(photo.storageId);
     await ctx.db.delete(args.photoId);
