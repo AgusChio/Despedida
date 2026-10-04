@@ -40,6 +40,10 @@ export function Gate() {
       >
         {pending ? "Abriendo Google…" : "Entrar con Gmail"}
       </button>
+      <p className="legal-links">
+        <a href={`${import.meta.env.BASE_URL}privacidad.html`}>Política de privacidad</a>
+        <a href={`${import.meta.env.BASE_URL}condiciones.html`}>Condiciones del servicio</a>
+      </p>
     </main>
   );
 }
