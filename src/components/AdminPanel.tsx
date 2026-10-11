@@ -8,6 +8,8 @@ import { useToast } from "./Toaster.tsx";
 export function AdminPanel() {
   const guests = useQuery(api.users.guests);
   const connection = useQuery(api.photos.connection);
+  const windows = useQuery(api.photos.windows);
+  const setUploads = useMutation(api.photos.setUploads);
   const setBride = useMutation(api.users.setBride);
   const clearBride = useMutation(api.users.clearBride);
   const renameGuest = useMutation(api.users.renameGuest);
@@ -19,6 +21,16 @@ export function AdminPanel() {
       toast.ok("Quedó marcada como novia.");
     } catch (caught) {
       toast.error(said(caught, "No se pudo marcar a la novia."));
+    }
+  }
+
+  async function toggleUploads() {
+    const locked = windows?.tarde.locked === true;
+    try {
+      await setUploads({ open: locked });
+      toast.ok(locked ? "Los álbumes volvieron a abrirse." : "Quedó cerrada la subida de fotos.");
+    } catch (caught) {
+      toast.error(said(caught, "No se pudo cambiar la subida."));
     }
   }
 
@@ -40,6 +52,14 @@ export function AdminPanel() {
       <p className="album-note">
         Las invitadas ven el plan. La actividad del sábado y la de la escapada solo las ves vos.
         Si alguien no carga su nombre, lo podés escribir vos.
+      </p>
+      <button type="button" className="pill pill-button" onClick={() => void toggleUploads()}>
+        {windows?.tarde.locked ? "Abrir álbumes" : "Cerrar álbumes"}
+      </button>
+      <p className="album-note">
+        {windows?.tarde.locked
+          ? "La subida está cerrada. Nadie puede sumar fotos."
+          : "Si lo cerrás, nadie puede sumar fotos hasta que lo abras."}
       </p>
       <ul className="guests">
         {guests?.map((guest) => (

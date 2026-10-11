@@ -116,6 +116,7 @@ function AlbumLive({
   const windows = useQuery(api.photos.windows);
   const windowForMoment = windows?.[slug];
   const uploadsOpen = (preview ? windowForMoment?.openForGuests : windowForMoment?.open) === true;
+  const uploadsLocked = windowForMoment?.locked === true;
   const connection = useQuery(api.photos.connection);
   const generateUploadUrl = useMutation(api.photos.generateUploadUrl);
   const savePhoto = useMutation(api.photos.savePhoto);
@@ -204,7 +205,9 @@ function AlbumLive({
   return (
     <section className="album">
       <AlbumIntro count={photos?.length} />
-      {uploadsOpen && named ? (
+      {uploadsLocked ? (
+        <p className="album-note">La organizadora cerró la subida de fotos.</p>
+      ) : uploadsOpen && named ? (
         <p className="album-note">Se guardan como {uploaderName}.</p>
       ) : uploadsOpen ? (
         <p className="album-note">
@@ -215,7 +218,7 @@ function AlbumLive({
           Las fotos se abren {windowForMoment?.from ?? "el día del momento"}.
         </p>
       )}
-      {uploadsOpen && named && (
+      {uploadsOpen && named && !uploadsLocked && (
       <div
         className={over ? "drop is-over" : "drop"}
         onDragOver={(event) => {
@@ -249,13 +252,13 @@ function AlbumLive({
       )}
       {photos === undefined ? (
         <p className="album-note">Cargando el álbum…</p>
-      ) : photos.length === 0 ? (
+      ) : photos.length === 0 && !uploadsLocked ? (
         <p className="album-note">
           {uploadsOpen
             ? "Cuando pase este momento, dejá acá las fotos."
             : "Hasta ese día, el álbum espera."}
         </p>
-      ) : (
+      ) : photos.length === 0 ? null : (
         <>
           <ul className="thumbs">
             {visible?.map((photo) => (

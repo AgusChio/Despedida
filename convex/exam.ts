@@ -128,6 +128,9 @@ export const save = mutation({
       .query("examAnswers")
       .withIndex("by_user", (q) => q.eq("userId", user.id))
       .unique();
+    if (user.isBride && existing && cleanAnswers(existing.answers)) {
+      throw new Error("Tus respuestas ya quedaron. No se pueden cambiar.");
+    }
     if (existing) {
       await ctx.db.patch(existing._id, { answers, updatedAt: Date.now() });
       return;

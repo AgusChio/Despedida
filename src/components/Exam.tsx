@@ -65,7 +65,7 @@ function BrideExam({ named, preview }: { named: boolean; preview: boolean }) {
     try {
       await save({ answers });
       setDraft(null);
-      toast.ok(done ? "Listo. Quedaron los cambios." : "Listo. Ya pueden contestar las chicas.");
+      toast.ok("Listo. Ya pueden contestar las chicas.");
     } catch (caught) {
       toast.error(said(caught, "No se pudieron guardar las respuestas."));
     } finally {
@@ -78,14 +78,16 @@ function BrideExam({ named, preview }: { named: boolean; preview: boolean }) {
       <p className="eyebrow">Solo en esta tarde</p>
       <h3>¿Quién conoce más a la novia?</h3>
       <p className="moment-lead">
-        Estas las respondés vos. Podés cambiarlas cuando quieras. Cuando estén las veinte, las chicas
-        pueden contestar.
+        {done && !preview
+          ? "Tus respuestas ya quedaron. No se pueden cambiar."
+          : "Estas las respondés vos, una sola vez. Cuando estén las veinte, las chicas pueden contestar."}
       </p>
       <ChoiceForm
         answers={answers}
         named={named}
         pending={pending}
-        submitLabel={done ? "Guardar cambios" : "Guardar respuestas"}
+        locked={done && !preview}
+        submitLabel="Guardar respuestas"
         onChange={(index, value) =>
           setDraft(answers.map((answer, item) => (item === index ? value : answer)))
         }
@@ -184,6 +186,7 @@ function ChoiceForm({
   answers,
   named,
   pending,
+  locked = false,
   submitLabel,
   onChange,
   onSubmit,
@@ -191,6 +194,7 @@ function ChoiceForm({
   answers: string[];
   named: boolean;
   pending: boolean;
+  locked?: boolean;
   submitLabel: string;
   onChange: (index: number, value: string) => void;
   onSubmit: (event: FormEvent) => void;
@@ -198,7 +202,7 @@ function ChoiceForm({
   return (
     <form className="exam-form" onSubmit={onSubmit}>
       {examBank.map((item, index) => (
-        <fieldset key={item.question} className="exam-choices" disabled={!named || pending}>
+        <fieldset key={item.question} className="exam-choices" disabled={!named || pending || locked}>
           <legend>
             {index + 1}. {item.question}
           </legend>
@@ -218,9 +222,11 @@ function ChoiceForm({
         </fieldset>
       ))}
       {!named && <p className="album-note">Confirmá tu nombre para contestarlo.</p>}
-      <button type="submit" className="gmail" disabled={!named || pending}>
-        {pending ? "Guardando…" : submitLabel}
-      </button>
+      {!locked && (
+        <button type="submit" className="gmail" disabled={!named || pending}>
+          {pending ? "Guardando…" : submitLabel}
+        </button>
+      )}
     </form>
   );
 }

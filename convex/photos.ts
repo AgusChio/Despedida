@@ -5,6 +5,8 @@ import {
   internalQuery,
   mutation,
   query,
+  type MutationCtx,
+  type QueryCtx,
 } from "./_generated/server";
 import { UPLOAD_OPEN_LABEL, currentUser, uploadsOpen } from "./helpers";
 
@@ -80,11 +82,21 @@ export const getInternal = internalQuery({
   },
 });
 
+async function uploadsLocked(ctx: QueryCtx | MutationCtx) {
+  const row = await ctx.db
+    .query("flags")
+    .withIndex("by_key", (q) => q.eq("key", "uploads"))
+    .unique();
+  return row?.on === true;
+}
+
 function canUpload(
   isAdmin: boolean,
   moment: "tarde" | "escapada" | "cafe",
+  locked: boolean,
   now = Date.now(),
 ) {
+  if (locked) return false;
   return uploadsOpen(moment, now) || (isAdmin && moment === "tarde");
 }
 
@@ -93,22 +105,17 @@ export const windows = query({
   handler: async (ctx) => {
     const user = await currentUser(ctx);
     const now = Date.now();
+    const locked = await uploadsLocked(ctx);
+    const windowFor = (moment: "tarde" | "escapada" | "cafe") => ({
+      open: canUpload(user?.isAdmin === true, moment, locked, now),
+      openForGuests: !locked && uploadsOpen(moment, now),
+      locked,
+      from: UPLOAD_OPEN_LABEL[moment],
+    });
     return {
-      tarde: {
-        open: canUpload(user?.isAdmin === true, "tarde", now),
-        openForGuests: uploadsOpen("tarde", now),
-        from: UPLOAD_OPEN_LABEL.tarde,
-      },
-      escapada: {
-        open: uploadsOpen("escapada", now),
-        openForGuests: uploadsOpen("escapada", now),
-        from: UPLOAD_OPEN_LABEL.escapada,
-      },
-      cafe: {
-        open: uploadsOpen("cafe", now),
-        openForGuests: uploadsOpen("cafe", now),
-        from: UPLOAD_OPEN_LABEL.cafe,
-      },
+      tarde: windowFor("tarde"),
+      escapada: windowFor("escapada"),
+      cafe: windowFor("cafe"),
     };
   },
 });
@@ -118,7 +125,9 @@ export const generateUploadUrl = mutation({
   handler: async (ctx, args) => {
     const user = await currentUser(ctx);
     if (!user?.hasName) throw new Error("Primero poné tu nombre y apellido.");
-    if (!canUpload(user.isAdmin, args.itinerarySlug)) {
+    const locked = await uploadsLocked(ctx);
+    if (locked) throw new Error("La organizadora cerró la subida de fotos.");
+    if (!canUpload(user.isAdmin, args.itinerarySlug, locked)) {
       throw new Error(
         `Las fotos se abren ${UPLOAD_OPEN_LABEL[args.itinerarySlug]}.`,
       );
@@ -137,7 +146,9 @@ export const savePhoto = mutation({
   handler: async (ctx, args) => {
     const user = await currentUser(ctx);
     if (!user?.hasName) throw new Error("Primero poné tu nombre y apellido.");
-    if (!canUpload(user.isAdmin, args.itinerarySlug)) {
+    const locked = await uploadsLocked(ctx);
+    if (locked) throw new Error("La organizadora cerró la subida de fotos.");
+    if (!canUpload(user.isAdmin, args.itinerarySlug, locked)) {
       throw new Error(
         `Las fotos se abren ${UPLOAD_OPEN_LABEL[args.itinerarySlug]}.`,
       );
@@ -158,6 +169,23 @@ export const savePhoto = mutation({
     });
     await ctx.scheduler.runAfter(0, internal.drive.mirrorToDrive, { photoId });
     return photoId;
+  },
+});
+
+export const setUploads = mutation({
+  args: { open: v.boolean() },
+  handler: async (ctx, args) => {
+    const user = await currentUser(ctx);
+    if (!user?.isAdmin) throw new Error("Solo la organizadora puede cerrar los álbumes.");
+    const existing = await ctx.db
+      .query("flags")
+      .withIndex("by_key", (q) => q.eq("key", "uploads"))
+      .unique();
+    if (existing) {
+      await ctx.db.patch(existing._id, { on: !args.open });
+      return;
+    }
+    await ctx.db.insert("flags", { key: "uploads", on: !args.open });
   },
 });
 

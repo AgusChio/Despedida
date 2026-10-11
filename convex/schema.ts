@@ -61,4 +61,8 @@ export default defineSchema({
     scheduled: v.boolean(),
     at: v.optional(v.number()),
   }).index("by_key", ["key"]),
+  flags: defineTable({
+    key: v.string(),
+    on: v.boolean(),
+  }).index("by_key", ["key"]),
 });
