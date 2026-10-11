@@ -51,38 +51,64 @@ export const open = query({
   },
 });
 
+async function loadRoster(ctx: QueryCtx | MutationCtx, withScore: boolean) {
+  const key = await brideRow(ctx);
+  if (!key) return { ready: false as const, people: [] };
+  const rows = await ctx.db.query("examAnswers").collect();
+  const people = (
+    await Promise.all(
+      rows.map(async (row) => {
+        if (row.userId === key.userId) return null;
+        const answers = cleanAnswers(row.answers);
+        if (!answers) return null;
+        const person = await ctx.db.get(row.userId);
+        if (!person || person.isBride) return null;
+        const displayName = displayNameOf(person) || person.name?.trim() || "Invitada";
+        if (withScore) {
+          const score = answers.filter((answer, index) => answer === key.answers[index]).length;
+          return { userId: row.userId, displayName, score };
+        }
+        return { userId: row.userId, displayName };
+      }),
+    )
+  )
+    .flatMap((person) => (person ? [person] : []))
+    .sort((a, b) => {
+      const scoreA = a.score ?? 0;
+      const scoreB = b.score ?? 0;
+      return scoreB - scoreA || a.displayName.localeCompare(b.displayName, "es");
+    });
+  return { ready: true as const, people };
+}
+
 export const roster = query({
   args: {},
   handler: async (ctx) => {
     const user = await currentUser(ctx);
     if (!user) return null;
-    const key = await brideRow(ctx);
-    if (!key) return { ready: false as const, people: [] };
-    const rows = await ctx.db.query("examAnswers").collect();
-    const people = (
-      await Promise.all(
-        rows.map(async (row) => {
-          if (row.userId === key.userId) return null;
-          const answers = cleanAnswers(row.answers);
-          if (!answers) return null;
-          const person = await ctx.db.get(row.userId);
-          if (!person || person.isBride) return null;
-          const displayName = displayNameOf(person) || person.name?.trim() || "Invitada";
-          if (user.isAdmin) {
-            const score = answers.filter((answer, index) => answer === key.answers[index]).length;
-            return { userId: row.userId, displayName, score };
-          }
-          return { userId: row.userId, displayName };
-        }),
-      )
-    )
-      .flatMap((person) => (person ? [person] : []))
-      .sort((a, b) => {
-        const scoreA = "score" in a ? (a.score ?? 0) : 0;
-        const scoreB = "score" in b ? (b.score ?? 0) : 0;
-        return scoreB - scoreA || a.displayName.localeCompare(b.displayName, "es");
-      });
-    return { ready: true as const, people };
+    return await loadRoster(ctx, user.isAdmin);
+  },
+});
+
+export const results = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await currentUser(ctx);
+    if (!user?.isAdmin) return null;
+    const list = await loadRoster(ctx, true);
+    if (!list.ready) {
+      return { ready: false as const, brideAnswers: [] as string[], ranking: [] };
+    }
+    return {
+      ready: true as const,
+      brideAnswers: [] as string[],
+      ranking: list.people.map((person) => ({
+        userId: person.userId,
+        displayName: person.displayName,
+        answers: [] as string[],
+        score: person.score ?? 0,
+      })),
+    };
   },
 });
 

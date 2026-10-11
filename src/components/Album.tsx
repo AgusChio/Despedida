@@ -199,7 +199,7 @@ function AlbumLive({
   }
 
   const visible = expanded ? photos : photos?.slice(0, PREVIEW_COUNT);
-  const folderLink = isAdmin ? connection?.links[slug] : null;
+  const folderLink = connection?.links[slug] ?? null;
 
   return (
     <section className="album">
@@ -320,7 +320,7 @@ function AlbumLive({
       {folderLink && (
         <p className="album-actions">
           <a href={folderLink} target="_blank" rel="noreferrer">
-            Abrir carpeta de Drive
+            Ver Drive
           </a>
         </p>
       )}

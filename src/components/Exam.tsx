@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "convex/react";
-import { useState, type FormEvent } from "react";
+import { Component, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "../../convex/_generated/api";
 import { examBank } from "../data/exam.ts";
 import { said } from "../lib/said.ts";
@@ -7,6 +7,23 @@ import { useToast } from "./Toaster.tsx";
 
 function blank() {
   return Array.from({ length: examBank.length }, () => "");
+}
+
+class ExamBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    if (this.state.failed) {
+      return (
+        <section className="exam" aria-label="Examen sorpresa">
+          <p className="album-note">El examen no está disponible ahora.</p>
+        </section>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 export function Exam({
@@ -20,8 +37,11 @@ export function Exam({
   named: boolean;
   preview?: boolean;
 }) {
-  if (isBride) return <BrideExam named={named} preview={preview} />;
-  return <GuestExam isAdmin={isAdmin} named={named} />;
+  return (
+    <ExamBoundary>
+      {isBride ? <BrideExam named={named} preview={preview} /> : <GuestExam isAdmin={isAdmin} named={named} />}
+    </ExamBoundary>
+  );
 }
 
 function BrideExam({ named, preview }: { named: boolean; preview: boolean }) {
@@ -103,7 +123,7 @@ function GuestExam({ isAdmin, named }: { isAdmin: boolean; named: boolean }) {
   }
 
   const people = roster?.people ?? [];
-  const top = people[0] && "score" in people[0] ? people[0].score : 0;
+  const top = people[0] && "score" in people[0] ? (people[0].score ?? 0) : 0;
   const closest = people.filter((person) => "score" in person && person.score === top && top > 0);
 
   return (

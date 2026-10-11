@@ -18,7 +18,12 @@ export function EngravedTree({ paused = false }: { paused?: boolean }) {
     const detail =
       window.innerWidth < 640 || (navigator.hardwareConcurrency || 8) <= 4 ? 0.8 : 1;
     const seed = seedForDay(new Date());
-    const renderer = new TreeRenderer(ink, live);
+    let renderer: TreeRenderer;
+    try {
+      renderer = new TreeRenderer(ink, live);
+    } catch {
+      return;
+    }
     const breath = breathRng(seed);
     const palette = readPalette();
 
