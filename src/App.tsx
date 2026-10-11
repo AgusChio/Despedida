@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import { api } from "../convex/_generated/api";
 import { AdminPanel } from "./components/AdminPanel.tsx";
+import { EngravedTree } from "./components/EngravedTree.tsx";
 import { Gate } from "./components/Gate.tsx";
 import { Invitation } from "./components/Invitation.tsx";
 import { Opening } from "./components/Opening.tsx";
@@ -14,9 +15,12 @@ import type { MomentId } from "./data/itinerary.ts";
 export default function App({ connected }: { connected: boolean }) {
   if (!connected) {
     return (
-      <main className="invitation gate">
-        <p className="lede">Falta conectar Convex para abrir la despedida.</p>
-      </main>
+      <>
+        <EngravedTree />
+        <main className="invitation gate">
+          <p className="lede">Falta conectar Convex para abrir la despedida.</p>
+        </main>
+      </>
     );
   }
   return <AuthedApp />;
@@ -166,6 +170,7 @@ function AuthedApp() {
 
   return (
     <div className="app-shell">
+      <EngravedTree paused={current === "panel"} />
       <main className="invitation">
         {preview && (
           <div className="preview-bar">

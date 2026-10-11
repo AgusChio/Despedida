@@ -51,15 +51,15 @@ export const open = query({
   },
 });
 
-export const results = query({
+export const roster = query({
   args: {},
   handler: async (ctx) => {
     const user = await currentUser(ctx);
-    if (!user?.isAdmin) return null;
+    if (!user) return null;
     const key = await brideRow(ctx);
-    if (!key) return { ready: false as const, brideAnswers: [] as string[], ranking: [] };
+    if (!key) return { ready: false as const, people: [] };
     const rows = await ctx.db.query("examAnswers").collect();
-    const ranking = (
+    const people = (
       await Promise.all(
         rows.map(async (row) => {
           if (row.userId === key.userId) return null;
@@ -67,21 +67,22 @@ export const results = query({
           if (!answers) return null;
           const person = await ctx.db.get(row.userId);
           if (!person || person.isBride) return null;
-          const score = answers.filter((answer, index) => answer === key.answers[index]).length;
-          return {
-            userId: row.userId,
-            displayName: displayNameOf(person) || person.name?.trim() || "Invitada",
-            answers,
-            score,
-          };
+          const displayName = displayNameOf(person) || person.name?.trim() || "Invitada";
+          if (user.isAdmin) {
+            const score = answers.filter((answer, index) => answer === key.answers[index]).length;
+            return { userId: row.userId, displayName, score };
+          }
+          return { userId: row.userId, displayName };
         }),
       )
     )
       .flatMap((person) => (person ? [person] : []))
-      .sort(
-        (a, b) => b.score - a.score || a.displayName.localeCompare(b.displayName, "es"),
-      );
-    return { ready: true as const, brideAnswers: key.answers, ranking };
+      .sort((a, b) => {
+        const scoreA = "score" in a ? (a.score ?? 0) : 0;
+        const scoreB = "score" in b ? (b.score ?? 0) : 0;
+        return scoreB - scoreA || a.displayName.localeCompare(b.displayName, "es");
+      });
+    return { ready: true as const, people };
   },
 });
 

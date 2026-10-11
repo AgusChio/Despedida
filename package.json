@@ -9,6 +9,7 @@
     "drive:conectar": "node scripts/conectar-drive.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test:tree": "npx --yes tsx src/tree/tree.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

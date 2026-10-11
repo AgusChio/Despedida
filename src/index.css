@@ -56,12 +56,28 @@ a {
   outline-offset: 3px;
 }
 
+.tree-host {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.tree-host canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .invitation {
   position: relative;
+  z-index: 1;
   width: min(880px, calc(100% - 28px));
   margin: 28px auto 40px;
   padding: 72px 64px 56px;
-  background: var(--card);
+  background: color-mix(in srgb, var(--card) 86%, transparent);
   border: 1px solid rgba(193, 123, 136, 0.35);
   box-shadow: 0 24px 60px rgba(90, 60, 55, 0.06);
 }
@@ -727,21 +743,45 @@ h2 {
   margin-top: 22px;
 }
 
-.exam-results article {
-  margin-top: 14px;
+.exam-acc {
+  margin-top: 10px;
+  border-bottom: 1px solid var(--line);
 }
 
-.exam-results ol {
-  margin: 8px 0 0;
-  padding-left: 1.1rem;
+.exam-acc summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-style: italic;
 }
 
-.exam-results li {
-  margin-top: 8px;
+.exam-acc summary::-webkit-details-marker {
+  display: none;
+}
+
+.exam-acc summary::after {
+  content: "+";
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  font-style: normal;
+}
+
+.exam-acc[open] summary::after {
+  content: "–";
+}
+
+.exam-acc .album-note {
+  margin: 0 0 12px;
 }
 
 .exam-score {
-  display: block;
   color: var(--muted);
   font-family: var(--sans);
   font-size: 0.82rem;
@@ -959,6 +999,8 @@ h2 {
 }
 
 .app-shell {
+  position: relative;
+  z-index: 1;
   padding-bottom: 118px;
 }
 

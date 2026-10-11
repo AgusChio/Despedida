@@ -78,7 +78,7 @@ function BrideExam({ named, preview }: { named: boolean; preview: boolean }) {
 function GuestExam({ isAdmin, named }: { isAdmin: boolean; named: boolean }) {
   const open = useQuery(api.exam.open);
   const saved = useQuery(api.exam.mine);
-  const results = useQuery(api.exam.results, isAdmin ? {} : "skip");
+  const roster = useQuery(api.exam.roster);
   const save = useMutation(api.exam.save);
   const toast = useToast();
   const [draft, setDraft] = useState<string[] | null>(null);
@@ -102,9 +102,9 @@ function GuestExam({ isAdmin, named }: { isAdmin: boolean; named: boolean }) {
     }
   }
 
-  const ranking = results?.ranking ?? [];
-  const top = ranking[0]?.score ?? 0;
-  const closest = ranking.filter((person) => person.score === top && top > 0);
+  const people = roster?.people ?? [];
+  const top = people[0] && "score" in people[0] ? people[0].score : 0;
+  const closest = people.filter((person) => "score" in person && person.score === top && top > 0);
 
   return (
     <section className="exam" aria-label="Examen sorpresa">
@@ -112,7 +112,7 @@ function GuestExam({ isAdmin, named }: { isAdmin: boolean; named: boolean }) {
       <h3>¿Quién conoce más a la novia?</h3>
       {open ? (
         <>
-          <p className="moment-lead">Elegí lo que haría Caro. Las respuestas las ve la organizadora.</p>
+          <p className="moment-lead">Elegí lo que haría Caro. Las respuestas no se muestran.</p>
           <ChoiceForm
             answers={answers}
             named={named}
@@ -129,43 +129,33 @@ function GuestExam({ isAdmin, named }: { isAdmin: boolean; named: boolean }) {
           Caro elige primero las respuestas. Cuando termine las veinte, se abre y pueden contestar.
         </p>
       )}
-      {isAdmin && (
-        <div className="exam-results">
-          <p className="eyebrow">Quién conoce más a la novia</p>
-          {!results?.ready && <p className="album-note">Caro todavía no terminó las suyas.</p>}
-          {results?.ready && ranking.length === 0 && <p className="album-note">Todavía nadie contestó.</p>}
-          {closest.length > 0 && (
-            <p className="moment-lead">
-              {closest.map((person) => person.displayName).join(", ")} · {top} de {examBank.length}.
-            </p>
-          )}
-          {ranking.map((person) => (
-            <article key={person.userId}>
-              <h4>
-                {person.displayName}
+      <div className="exam-results">
+        <p className="eyebrow">Ya contestaron</p>
+        {roster && !roster.ready && <p className="album-note">Caro todavía no terminó las suyas.</p>}
+        {roster?.ready && people.length === 0 && <p className="album-note">Todavía nadie contestó.</p>}
+        {isAdmin && closest.length > 0 && (
+          <p className="moment-lead">
+            {closest.map((person) => person.displayName).join(", ")} · {top} de {examBank.length}.
+          </p>
+        )}
+        {people.map((person) => (
+          <details key={person.userId} className="exam-acc">
+            <summary>
+              <span>{person.displayName}</span>
+              {isAdmin && "score" in person && (
                 <span className="exam-score">
                   {person.score} de {examBank.length}
                 </span>
-              </h4>
-              <ol>
-                {examBank.map((item, index) => {
-                  const hers = results?.brideAnswers[index];
-                  const picked = person.answers[index];
-                  return (
-                    <li key={item.question}>
-                      <span>
-                        {index + 1}. {item.question}
-                      </span>
-                      {picked}
-                      {picked !== hers && <em className="exam-miss">Caro: {hers}</em>}
-                    </li>
-                  );
-                })}
-              </ol>
-            </article>
-          ))}
-        </div>
-      )}
+              )}
+            </summary>
+            <p className="album-note">
+              {isAdmin && "score" in person
+                ? `Acertó ${person.score} de ${examBank.length}.`
+                : "Ya entregó."}
+            </p>
+          </details>
+        ))}
+      </div>
     </section>
   );
 }
