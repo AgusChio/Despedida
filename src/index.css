@@ -796,8 +796,16 @@ h2 {
   font-size: clamp(2rem, 4vw, 2.6rem);
 }
 
-.admin > .pill-button {
+.album-locks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 12px;
+}
+
+.album-locks .pill-button.is-locked {
+  background: var(--rose);
+  color: #fff;
 }
 
 .guests {

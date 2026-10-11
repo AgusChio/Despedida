@@ -82,12 +82,35 @@ export const getInternal = internalQuery({
   },
 });
 
-async function uploadsLocked(ctx: QueryCtx | MutationCtx) {
+type Moment = "tarde" | "escapada" | "cafe";
+
+async function flagOn(ctx: QueryCtx | MutationCtx, key: string) {
   const row = await ctx.db
     .query("flags")
-    .withIndex("by_key", (q) => q.eq("key", "uploads"))
+    .withIndex("by_key", (q) => q.eq("key", key))
     .unique();
   return row?.on === true;
+}
+
+async function lockedMoments(ctx: QueryCtx | MutationCtx) {
+  const global = await flagOn(ctx, "uploads");
+  return {
+    tarde: global || (await flagOn(ctx, "uploads:tarde")),
+    escapada: global || (await flagOn(ctx, "uploads:escapada")),
+    cafe: global || (await flagOn(ctx, "uploads:cafe")),
+  };
+}
+
+async function setFlag(ctx: MutationCtx, key: string, on: boolean) {
+  const row = await ctx.db
+    .query("flags")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .unique();
+  if (row) {
+    if (row.on !== on) await ctx.db.patch(row._id, { on });
+    return;
+  }
+  if (on) await ctx.db.insert("flags", { key, on: true });
 }
 
 function canUpload(
@@ -105,11 +128,11 @@ export const windows = query({
   handler: async (ctx) => {
     const user = await currentUser(ctx);
     const now = Date.now();
-    const locked = await uploadsLocked(ctx);
-    const windowFor = (moment: "tarde" | "escapada" | "cafe") => ({
-      open: canUpload(user?.isAdmin === true, moment, locked, now),
-      openForGuests: !locked && uploadsOpen(moment, now),
-      locked,
+    const locked = await lockedMoments(ctx);
+    const windowFor = (moment: Moment) => ({
+      open: canUpload(user?.isAdmin === true, moment, locked[moment], now),
+      openForGuests: !locked[moment] && uploadsOpen(moment, now),
+      locked: locked[moment],
       from: UPLOAD_OPEN_LABEL[moment],
     });
     return {
@@ -125,7 +148,7 @@ export const generateUploadUrl = mutation({
   handler: async (ctx, args) => {
     const user = await currentUser(ctx);
     if (!user?.hasName) throw new Error("Primero poné tu nombre y apellido.");
-    const locked = await uploadsLocked(ctx);
+    const locked = (await lockedMoments(ctx))[args.itinerarySlug];
     if (locked) throw new Error("La organizadora cerró la subida de fotos.");
     if (!canUpload(user.isAdmin, args.itinerarySlug, locked)) {
       throw new Error(
@@ -146,7 +169,7 @@ export const savePhoto = mutation({
   handler: async (ctx, args) => {
     const user = await currentUser(ctx);
     if (!user?.hasName) throw new Error("Primero poné tu nombre y apellido.");
-    const locked = await uploadsLocked(ctx);
+    const locked = (await lockedMoments(ctx))[args.itinerarySlug];
     if (locked) throw new Error("La organizadora cerró la subida de fotos.");
     if (!canUpload(user.isAdmin, args.itinerarySlug, locked)) {
       throw new Error(
@@ -173,19 +196,19 @@ export const savePhoto = mutation({
 });
 
 export const setUploads = mutation({
-  args: { open: v.boolean() },
+  args: { open: v.boolean(), itinerarySlug: v.optional(slug) },
   handler: async (ctx, args) => {
     const user = await currentUser(ctx);
     if (!user?.isAdmin) throw new Error("Solo la organizadora puede cerrar los álbumes.");
-    const existing = await ctx.db
-      .query("flags")
-      .withIndex("by_key", (q) => q.eq("key", "uploads"))
-      .unique();
-    if (existing) {
-      await ctx.db.patch(existing._id, { on: !args.open });
-      return;
+    const current = await lockedMoments(ctx);
+    const targets: Moment[] = args.itinerarySlug
+      ? [args.itinerarySlug]
+      : ["tarde", "escapada", "cafe"];
+    for (const moment of ["tarde", "escapada", "cafe"] as const) {
+      const lock = targets.includes(moment) ? !args.open : current[moment];
+      await setFlag(ctx, `uploads:${moment}`, lock);
     }
-    await ctx.db.insert("flags", { key: "uploads", on: !args.open });
+    await setFlag(ctx, "uploads", false);
   },
 });
 

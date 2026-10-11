@@ -24,11 +24,11 @@ export function AdminPanel() {
     }
   }
 
-  async function toggleUploads() {
-    const locked = windows?.tarde.locked === true;
+  async function toggleUploads(slug: "tarde" | "escapada" | "cafe", name: string) {
+    const locked = windows?.[slug].locked === true;
     try {
-      await setUploads({ open: locked });
-      toast.ok(locked ? "Los álbumes volvieron a abrirse." : "Quedó cerrada la subida de fotos.");
+      await setUploads({ itinerarySlug: slug, open: locked });
+      toast.ok(locked ? `Volvió a abrirse ${name}.` : `Quedó cerrada la subida de ${name}.`);
     } catch (caught) {
       toast.error(said(caught, "No se pudo cambiar la subida."));
     }
@@ -53,14 +53,29 @@ export function AdminPanel() {
         Las invitadas ven el plan. La actividad del sábado y la de la escapada solo las ves vos.
         Si alguien no carga su nombre, lo podés escribir vos.
       </p>
-      <button type="button" className="pill pill-button" onClick={() => void toggleUploads()}>
-        {windows?.tarde.locked ? "Abrir álbumes" : "Cerrar álbumes"}
-      </button>
-      <p className="album-note">
-        {windows?.tarde.locked
-          ? "La subida está cerrada. Nadie puede sumar fotos."
-          : "Si lo cerrás, nadie puede sumar fotos hasta que lo abras."}
-      </p>
+      <div className="album-locks" role="group" aria-label="Cerrar álbumes">
+        {(
+          [
+            ["tarde", "01 Tarde", "la tarde"],
+            ["escapada", "02 Escapada", "la escapada"],
+            ["cafe", "03 Cafecito", "el cafecito"],
+          ] as const
+        ).map(([slug, label, name]) => {
+          const locked = windows?.[slug].locked === true;
+          return (
+            <button
+              key={slug}
+              type="button"
+              className={locked ? "pill pill-button is-locked" : "pill pill-button"}
+              aria-pressed={locked}
+              onClick={() => void toggleUploads(slug, name)}
+            >
+              {locked ? `${label} · cerrado` : label}
+            </button>
+          );
+        })}
+      </div>
+      <p className="album-note">Tocá el que quieras cerrar. Nadie puede sumar fotos ahí hasta que lo abras.</p>
       <ul className="guests">
         {guests?.map((guest) => (
           <GuestRow
