@@ -145,11 +145,9 @@ export const windows = query({
   },
 });
 
-function driveView(photoId: string, driveFileId: string | undefined) {
+function driveView(_photoId: string, driveFileId: string | undefined) {
   if (!driveFileId) return null;
-  const site = process.env.CONVEX_SITE_URL?.replace(/\/$/, "");
-  if (!site) return null;
-  return `${site}/foto?id=${encodeURIComponent(photoId)}`;
+  return `https://lh3.googleusercontent.com/d/${driveFileId}=w2000`;
 }
 
 export const gate = internalQuery({
@@ -196,6 +194,25 @@ export const record = internalMutation({
       driveStatus: "en_drive",
       createdAt: Date.now(),
     });
+  },
+});
+
+export const purgeStoredFiles = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const files = await ctx.db.system.query("_storage").collect();
+    for (const file of files) {
+      await ctx.storage.delete(file._id);
+    }
+    return { deleted: files.length };
+  },
+});
+
+export const driveFileIds = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const photos = await ctx.db.query("photos").collect();
+    return photos.flatMap((photo) => (photo.driveFileId ? [photo.driveFileId] : []));
   },
 });
 

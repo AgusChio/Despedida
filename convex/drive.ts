@@ -154,6 +154,10 @@ export const publish = action({
       mime: args.contentType.startsWith("image/") ? args.contentType : "image/jpeg",
       bytes,
     });
+    const shared = await shareForView(token, uploaded.id);
+    if (shared !== "ok") {
+      throw new Error("Drive no dejó mostrar la foto en el álbum.");
+    }
     await ctx.runMutation(internal.photos.record, {
       itinerarySlug: args.itinerarySlug,
       fileName: args.fileName,
@@ -208,6 +212,41 @@ export const drainStorage = internalAction({
       }
     }
     return { seen: photos.length, freed, failed };
+  },
+});
+
+async function shareForView(token: string, fileId: string) {
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}/permissions?supportsAllDrives=true`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ role: "reader", type: "anyone" }),
+    },
+  );
+  if (response.ok) return "ok";
+  const detail = await response.text();
+  if (/already exists/i.test(detail)) return "ok";
+  return detail.slice(0, 160);
+}
+
+export const shareAlbum = internalAction({
+  args: {},
+  handler: async (ctx): Promise<{ seen: number; shared: number; failed: number }> => {
+    const ids = await ctx.runQuery(internal.photos.driveFileIds, {});
+    const token = await accessToken();
+    if (!token) return { seen: ids.length, shared: 0, failed: ids.length };
+    let shared = 0;
+    let failed = 0;
+    for (const fileId of ids) {
+      const result = await shareForView(token, fileId);
+      if (result === "ok") shared += 1;
+      else failed += 1;
+    }
+    return { seen: ids.length, shared, failed };
   },
 });
 
