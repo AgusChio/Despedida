@@ -76,6 +76,7 @@ export const list = query({
         driveStatus: photo.driveStatus,
         createdAt: photo.createdAt,
         canRemove: user.isAdmin,
+        video: photo.contentType.startsWith("video/"),
         url: photoUrl(photo),
       })),
     );
@@ -200,7 +201,7 @@ export const record = internalMutation({
     return await ctx.db.insert("photos", {
       itinerarySlug: args.itinerarySlug,
       fileName,
-      contentType: args.contentType.startsWith("image/")
+      contentType: args.contentType.startsWith("image/") || args.contentType.startsWith("video/")
         ? args.contentType
         : "image/jpeg",
       uploadedBy: user.displayName,
@@ -211,6 +212,14 @@ export const record = internalMutation({
       driveStatus: "en_drive",
       createdAt: Date.now(),
     });
+  },
+});
+
+export const r2KeyTaken = internalQuery({
+  args: { key: v.string() },
+  handler: async (ctx, args) => {
+    const photos = await ctx.db.query("photos").collect();
+    return photos.some((photo) => photo.r2Key === args.key);
   },
 });
 

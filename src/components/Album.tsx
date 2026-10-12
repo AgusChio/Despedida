@@ -10,6 +10,7 @@ import { useToast } from "./Toaster.tsx";
 
 const MAX_BATCH = 30;
 const PREVIEW_COUNT = 6;
+const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
 
 type Photo = {
   _id: Id<"photos">;
@@ -18,8 +19,28 @@ type Photo = {
   driveStatus: "pendiente" | "en_drive" | "sin_carpeta" | "error";
   createdAt: number;
   canRemove: boolean;
+  video: boolean;
   url: string | null;
 };
+
+function isVideoFile(file: File) {
+  return file.type.startsWith("video/") || /\.(mp4|m4v|mov|webm|3gp)$/i.test(file.name);
+}
+
+function isImageFile(file: File) {
+  return (
+    file.type.startsWith("image/") || /\.(heic|heif|jpe?g|png|webp|gif)$/i.test(file.name)
+  );
+}
+
+function albumLabel(photos: Photo[]) {
+  if (photos.length === 0) return "Todavía no hay fotos";
+  const videos = photos.filter((photo) => photo.video).length;
+  const images = photos.length - videos;
+  if (videos === 0) return `${images} ${images === 1 ? "foto" : "fotos"}`;
+  if (images === 0) return `${videos} ${videos === 1 ? "video" : "videos"}`;
+  return `${photos.length} en el álbum`;
+}
 
 class AlbumBoundary extends Component<
   { children: ReactNode },
@@ -73,15 +94,11 @@ export function Album({
   );
 }
 
-function AlbumIntro({ count }: { count?: number }) {
+function AlbumIntro({ label }: { label?: string }) {
   return (
     <div className="album-head">
       <h3>Álbum</h3>
-      <p>
-        {typeof count === "number" && count > 0
-          ? `${count} ${count === 1 ? "foto" : "fotos"}`
-          : "Todavía no hay fotos"}
-      </p>
+      <p>{label ?? "Todavía no hay fotos"}</p>
     </div>
   );
 }
@@ -119,6 +136,8 @@ function AlbumLive({
   const uploadsLocked = windowForMoment?.locked === true;
   const connection = useQuery(api.photos.connection);
   const publish = useAction(api.drive.publish);
+  const signVideo = useAction(api.r2.signVideo);
+  const commitVideo = useAction(api.r2.commitVideo);
   const removePhoto = useMutation(api.photos.remove);
   const toast = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -128,23 +147,45 @@ function AlbumLive({
   const [open, setOpen] = useState<Photo | null>(null);
   const close = useCallback(() => setOpen(null), []);
 
+  async function uploadVideo(file: File) {
+    if (file.size > MAX_VIDEO_BYTES) throw new Error("pesado");
+    const signed = await signVideo({
+      itinerarySlug: slug,
+      fileName: file.name,
+      contentType: file.type || "video/mp4",
+    });
+    const put = await fetch(signed.uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": signed.contentType },
+      body: file,
+    });
+    if (!put.ok) throw new Error("subida");
+    await commitVideo({
+      itinerarySlug: slug,
+      key: signed.key,
+      fileName: file.name,
+      contentType: signed.contentType,
+    });
+  }
+
   async function handleFiles(incoming: File[]) {
-    const images = incoming.filter(
-      (file) =>
-        file.type.startsWith("image/") ||
-        /\.(heic|heif|jpe?g|png|webp|gif)$/i.test(file.name),
-    );
-    if (images.length === 0) {
-      toast.error("Elegí fotos, no otros archivos.");
+    const media = incoming.filter((file) => isImageFile(file) || isVideoFile(file));
+    if (media.length === 0) {
+      toast.error("Elegí fotos o videos.");
       return;
     }
-    const batch = images.slice(0, MAX_BATCH);
-    const skipped = images.length - batch.length;
+    const batch = media.slice(0, MAX_BATCH);
+    const skipped = media.length - batch.length;
     setBusy(true);
     let failed = 0;
-    for (let index = 0; index < batch.length; index += 1) {
+    let heavy = 0;
+    for (const item of batch) {
       try {
-        const file = await prepareImage(batch[index]);
+        if (isVideoFile(item)) {
+          await uploadVideo(item);
+          continue;
+        }
+        const file = await prepareImage(item);
         if (file.size > 8_000_000) throw new Error("pesada");
         await publish({
           itinerarySlug: slug,
@@ -152,16 +193,19 @@ function AlbumLive({
           contentType: file.type || "image/jpeg",
           bytes: await file.arrayBuffer(),
         });
-      } catch {
+      } catch (caught) {
         failed += 1;
+        if (caught instanceof Error && caught.message === "pesado") heavy += 1;
       }
     }
     setBusy(false);
-    if (failed > 0) {
+    if (heavy > 0 && heavy === failed) {
+      toast.error("El video es muy pesado. Probá con uno más corto.");
+    } else if (failed > 0) {
       toast.error(
         failed === 1
-          ? "Una foto no se pudo subir. Probá de nuevo."
-          : `${failed} fotos no se pudieron subir.`,
+          ? "Uno no se pudo subir. Probá de nuevo."
+          : `${failed} no se pudieron subir.`,
       );
     } else if (skipped > 0) {
       toast.note(`Subí ${batch.length}. El resto, de a ${MAX_BATCH}.`);
@@ -177,11 +221,11 @@ function AlbumLive({
   }
 
   function onRemove(photo: Photo) {
-    toast.ask("¿Sacamos esta foto del álbum y de Drive?", () => {
+    toast.ask(photo.video ? "¿Sacamos este video del álbum?" : "¿Sacamos esta foto del álbum y de Drive?", () => {
       void removePhoto({ photoId: photo._id })
         .then(() => {
           if (open?._id === photo._id) setOpen(null);
-          toast.ok("Foto sacada.");
+          toast.ok(photo.video ? "Video sacado." : "Foto sacada.");
         })
         .catch((caught: unknown) => {
           toast.error(said(caught, "No se pudo sacar la foto."));
@@ -194,7 +238,7 @@ function AlbumLive({
 
   return (
     <section className="album">
-      <AlbumIntro count={photos?.length} />
+      <AlbumIntro label={photos ? albumLabel(photos) : undefined} />
       {uploadsLocked ? (
         <p className="album-note">La organizadora cerró la subida de fotos.</p>
       ) : uploadsOpen && named ? (
@@ -222,7 +266,7 @@ function AlbumLive({
           ref={inputRef}
           className="file-input"
           type="file"
-          accept="image/*"
+          accept="image/*,video/*"
           multiple
           onChange={(event) => {
             const files = event.target.files ? [...event.target.files] : [];
@@ -235,9 +279,9 @@ function AlbumLive({
           disabled={busy}
           onClick={() => inputRef.current?.click()}
         >
-          {busy ? "Subiendo…" : "Sumar fotos"}
+          {busy ? "Subiendo…" : "Sumar fotos y videos"}
         </button>
-        <span>o arrastralas acá</span>
+        <span>o arrastralos acá</span>
       </div>
       )}
       {photos === undefined ? (
@@ -245,7 +289,7 @@ function AlbumLive({
       ) : photos.length === 0 && !uploadsLocked ? (
         <p className="album-note">
           {uploadsOpen
-            ? "Cuando pase este momento, dejá acá las fotos."
+            ? "Cuando pase este momento, dejá acá las fotos y los videos."
             : "Hasta ese día, el álbum espera."}
         </p>
       ) : photos.length === 0 ? null : (
@@ -259,7 +303,17 @@ function AlbumLive({
                   onClick={() => photo.url && setOpen(photo)}
                   disabled={!photo.url}
                 >
-                  {photo.url ? (
+                  {photo.url && photo.video ? (
+                    <>
+                      <video
+                        src={`${photo.url}#t=0.1`}
+                        muted
+                        playsInline
+                        preload="metadata"
+                      />
+                      <span className="thumb-play" aria-hidden="true" />
+                    </>
+                  ) : photo.url ? (
                     <img
                       src={photo.url}
                       alt={
@@ -305,7 +359,7 @@ function AlbumLive({
               className="text-button"
               onClick={() => setExpanded((value) => !value)}
             >
-              {expanded ? "Ver menos" : `Ver las ${photos.length} fotos`}
+              {expanded ? "Ver menos" : `Ver los ${photos.length}`}
             </button>
           )}
         </>
@@ -323,6 +377,7 @@ function AlbumLive({
             url: open.url,
             fileName: open.fileName,
             uploadedBy: open.uploadedBy,
+            video: open.video,
           }}
           onClose={close}
         />

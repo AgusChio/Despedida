@@ -4,6 +4,7 @@ type LightboxPhoto = {
   url: string;
   fileName: string;
   uploadedBy: string | null;
+  video?: boolean;
 };
 
 export function Lightbox({
@@ -35,7 +36,11 @@ export function Lightbox({
       onClick={onClose}
     >
       <figure onClick={(event) => event.stopPropagation()}>
-        <img src={photo.url} alt={photo.fileName} />
+        {photo.video ? (
+          <video src={photo.url} controls playsInline autoPlay />
+        ) : (
+          <img src={photo.url} alt={photo.fileName} />
+        )}
         <figcaption>
           {photo.uploadedBy ? photo.uploadedBy : photo.fileName}
         </figcaption>
