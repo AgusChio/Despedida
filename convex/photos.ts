@@ -214,6 +214,34 @@ export const record = internalMutation({
   },
 });
 
+export const attachR2 = internalMutation({
+  args: { photoId: v.id("photos"), r2Key: v.string() },
+  handler: async (ctx, args) => {
+    const photo = await ctx.db.get(args.photoId);
+    if (!photo) return;
+    await ctx.db.patch(args.photoId, { r2Key: args.r2Key });
+  },
+});
+
+export const pendingR2 = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const photos = await ctx.db.query("photos").collect();
+    return photos.flatMap((photo) =>
+      photo.driveFileId && !photo.r2Key
+        ? [
+            {
+              id: photo._id,
+              driveFileId: photo.driveFileId,
+              contentType: photo.contentType,
+              itinerarySlug: photo.itinerarySlug,
+            },
+          ]
+        : [],
+    );
+  },
+});
+
 export const purgeStoredFiles = internalMutation({
   args: {},
   handler: async (ctx) => {
