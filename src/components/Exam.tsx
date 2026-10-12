@@ -77,22 +77,26 @@ function BrideExam({ named, preview }: { named: boolean; preview: boolean }) {
     <section className="exam" aria-label="Examen sorpresa">
       <p className="eyebrow">Solo en esta tarde</p>
       <h3>¿Quién conoce más a la novia?</h3>
-      <p className="moment-lead">
-        {done && !preview
-          ? "Tus respuestas ya quedaron. No se pueden cambiar."
-          : "Estas las respondés vos, una sola vez. Cuando estén las veinte, las chicas pueden contestar."}
-      </p>
-      <ChoiceForm
-        answers={answers}
-        named={named}
-        pending={pending}
-        locked={done && !preview}
-        submitLabel="Guardar respuestas"
-        onChange={(index, value) =>
-          setDraft(answers.map((answer, item) => (item === index ? value : answer)))
-        }
-        onSubmit={(event) => void submit(event)}
-      />
+      {done && !preview ? (
+        <Compared />
+      ) : (
+        <>
+          <p className="moment-lead">
+            Estas las respondés vos, una sola vez. Cuando estén las veinte, las chicas pueden contestar.
+          </p>
+          <ChoiceForm
+            answers={answers}
+            named={named}
+            pending={pending}
+            locked={false}
+            submitLabel="Guardar respuestas"
+            onChange={(index, value) =>
+              setDraft(answers.map((answer, item) => (item === index ? value : answer)))
+            }
+            onSubmit={(event) => void submit(event)}
+          />
+        </>
+      )}
     </section>
   );
 }
@@ -132,14 +136,16 @@ function GuestExam({ isAdmin, named }: { isAdmin: boolean; named: boolean }) {
     <section className="exam" aria-label="Examen sorpresa">
       <p className="eyebrow">Solo en esta tarde</p>
       <h3>¿Quién conoce más a la novia?</h3>
-      {open ? (
+      {done ? (
+        <Compared />
+      ) : open ? (
         <>
           <p className="moment-lead">Elegí lo que haría Caro. Las respuestas no se muestran.</p>
           <ChoiceForm
             answers={answers}
             named={named}
             pending={pending}
-            submitLabel={done ? "Guardar de nuevo" : "Entregar"}
+            submitLabel="Entregar"
             onChange={(index, value) =>
               setDraft(answers.map((answer, item) => (item === index ? value : answer)))
             }
@@ -151,6 +157,7 @@ function GuestExam({ isAdmin, named }: { isAdmin: boolean; named: boolean }) {
           Caro elige primero las respuestas. Cuando termine las veinte, se abre y pueden contestar.
         </p>
       )}
+      {!done && (
       <div className="exam-results">
         <p className="eyebrow">Ya contestaron</p>
         {roster && !roster.ready && <p className="album-note">Caro todavía no terminó las suyas.</p>}
@@ -178,8 +185,65 @@ function GuestExam({ isAdmin, named }: { isAdmin: boolean; named: boolean }) {
           </details>
         ))}
       </div>
+      )}
     </section>
   );
+}
+
+function Compared() {
+  const compare = useQuery(api.exam.compare);
+  if (compare === undefined) return <p className="album-note">Cargando las respuestas…</p>;
+  if (!compare.revealed) return <p className="album-note">Las respuestas aparecen cuando terminás las veinte.</p>;
+  return <GirlBoards brideAnswers={compare.brideAnswers} people={compare.people} />;
+}
+
+function GirlBoards({
+  brideAnswers,
+  people,
+}: {
+  brideAnswers: string[];
+  people: { userId: string; displayName: string; answers: string[]; score: number }[];
+}) {
+  if (people.length === 0) return <p className="album-note">Todavía nadie contestó.</p>;
+  return (
+    <div className="exam-results">
+      {people.map((person) => (
+        <details key={person.userId} className="exam-acc">
+          <summary>
+            <span>{person.displayName}</span>
+            <span className="exam-score">
+              {person.score} de {examBank.length}
+            </span>
+          </summary>
+          <div className="exam-pairs">
+            {examBank.map((item, index) => {
+              const hers = brideAnswers[index];
+              const ours = person.answers[index];
+              return (
+                <div key={item.question} className="exam-pair">
+                  <p className="exam-q">
+                    {index + 1}. {item.question}
+                  </p>
+                  <p className="exam-line">
+                    <span>Caro</span>
+                    {hers}
+                  </p>
+                  <p className={hers === ours ? "exam-line is-hit" : "exam-line is-miss"}>
+                    <span>{firstName(person.displayName)}</span>
+                    {ours}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+function firstName(name: string) {
+  return name.trim().split(/\s+/)[0] || "Ella";
 }
 
 function ChoiceForm({

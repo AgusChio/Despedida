@@ -90,6 +90,44 @@ export const roster = query({
   },
 });
 
+export const compare = query({
+  args: {},
+  handler: async (ctx) => {
+    const hidden = { revealed: false as const };
+    const user = await currentUser(ctx);
+    if (!user?.hasName) return hidden;
+    const key = await brideRow(ctx);
+    if (!key) return hidden;
+    const own = await ctx.db
+      .query("examAnswers")
+      .withIndex("by_user", (q) => q.eq("userId", user.id))
+      .unique();
+    const finished = cleanAnswers(own?.answers ?? []) !== null;
+    const revealed = user.isBride ? user.id === key.userId : finished;
+    if (!revealed) return hidden;
+
+    const rows = await ctx.db.query("examAnswers").collect();
+    const people = (
+      await Promise.all(
+        rows.map(async (row) => {
+          if (row.userId === key.userId) return null;
+          const answers = cleanAnswers(row.answers);
+          if (!answers) return null;
+          const person = await ctx.db.get(row.userId);
+          if (!person || person.isBride) return null;
+          const displayName = displayNameOf(person) || person.name?.trim() || "Invitada";
+          const score = answers.filter((answer, index) => answer === key.answers[index]).length;
+          return { userId: row.userId, displayName, answers, score };
+        }),
+      )
+    )
+      .flatMap((person) => (person ? [person] : []))
+      .sort((a, b) => b.score - a.score || a.displayName.localeCompare(b.displayName, "es"));
+
+    return { revealed: true as const, brideAnswers: key.answers, people };
+  },
+});
+
 export const results = query({
   args: {},
   handler: async (ctx) => {
