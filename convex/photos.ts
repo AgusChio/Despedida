@@ -69,7 +69,9 @@ export const list = query({
         driveStatus: photo.driveStatus,
         createdAt: photo.createdAt,
         canRemove: user.isAdmin,
-        url: await ctx.storage.getUrl(photo.storageId),
+        url: photo.storageId
+          ? await ctx.storage.getUrl(photo.storageId)
+          : driveView(photo._id, photo.driveFileId),
       })),
     );
   },
@@ -143,7 +145,14 @@ export const windows = query({
   },
 });
 
-export const generateUploadUrl = mutation({
+function driveView(photoId: string, driveFileId: string | undefined) {
+  if (!driveFileId) return null;
+  const site = process.env.CONVEX_SITE_URL?.replace(/\/$/, "");
+  if (!site) return null;
+  return `${site}/foto?id=${encodeURIComponent(photoId)}`;
+}
+
+export const gate = internalQuery({
   args: { itinerarySlug: slug },
   handler: async (ctx, args) => {
     const user = await currentUser(ctx);
@@ -155,43 +164,83 @@ export const generateUploadUrl = mutation({
         `Las fotos se abren ${UPLOAD_OPEN_LABEL[args.itinerarySlug]}.`,
       );
     }
-    return await ctx.storage.generateUploadUrl();
+    return { userId: user.id, displayName: user.displayName };
   },
 });
 
-export const savePhoto = mutation({
+export const record = internalMutation({
   args: {
     itinerarySlug: slug,
-    storageId: v.id("_storage"),
     fileName: v.string(),
     contentType: v.string(),
+    driveFileId: v.string(),
+    driveLink: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await currentUser(ctx);
-    if (!user?.hasName) throw new Error("Primero poné tu nombre y apellido.");
-    const locked = (await lockedMoments(ctx))[args.itinerarySlug];
-    if (locked) throw new Error("La organizadora cerró la subida de fotos.");
-    if (!canUpload(user.isAdmin, args.itinerarySlug, locked)) {
-      throw new Error(
-        `Las fotos se abren ${UPLOAD_OPEN_LABEL[args.itinerarySlug]}.`,
-      );
-    }
+    if (!user?.hasName) throw new Error("Tenés que entrar.");
     const original =
       args.fileName.replace(/[/\\]/g, "").replace(/\s+/g, " ").slice(0, 80) ||
       "foto.jpg";
     const fileName = `${user.displayName} - ${original}`.slice(0, 180);
-    const photoId = await ctx.db.insert("photos", {
+    return await ctx.db.insert("photos", {
       itinerarySlug: args.itinerarySlug,
-      storageId: args.storageId,
       fileName,
-      contentType: args.contentType || "image/jpeg",
+      contentType: args.contentType.startsWith("image/")
+        ? args.contentType
+        : "image/jpeg",
       uploadedBy: user.displayName,
       userId: user.id,
-      driveStatus: "pendiente",
+      driveFileId: args.driveFileId,
+      ...(args.driveLink ? { driveLink: args.driveLink } : {}),
+      driveStatus: "en_drive",
       createdAt: Date.now(),
     });
-    await ctx.scheduler.runAfter(0, internal.drive.mirrorToDrive, { photoId });
-    return photoId;
+  },
+});
+
+export const withStorage = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const photos = await ctx.db.query("photos").collect();
+    return photos
+      .filter((photo) => photo.storageId)
+      .map((photo) => ({
+        _id: photo._id,
+        storageId: photo.storageId!,
+        driveFileId: photo.driveFileId ?? null,
+        fileName: photo.fileName,
+        contentType: photo.contentType,
+        itinerarySlug: photo.itinerarySlug,
+      }));
+  },
+});
+
+export const forgetStorage = internalMutation({
+  args: {
+    photoId: v.id("photos"),
+    driveFileId: v.optional(v.string()),
+    driveLink: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const photo = await ctx.db.get(args.photoId);
+    if (!photo?.storageId) return;
+    const driveFileId = args.driveFileId ?? photo.driveFileId;
+    if (!driveFileId) throw new Error("La foto todavía no está en Drive.");
+    await ctx.storage.delete(photo.storageId);
+    await ctx.db.replace(args.photoId, {
+      itinerarySlug: photo.itinerarySlug,
+      fileName: photo.fileName,
+      contentType: photo.contentType,
+      ...(photo.uploadedBy ? { uploadedBy: photo.uploadedBy } : {}),
+      ...(photo.userId ? { userId: photo.userId } : {}),
+      driveFileId,
+      ...(args.driveLink || photo.driveLink
+        ? { driveLink: args.driveLink ?? photo.driveLink }
+        : {}),
+      driveStatus: "en_drive",
+      createdAt: photo.createdAt,
+    });
   },
 });
 
@@ -222,7 +271,7 @@ export const remove = mutation({
     if (!user.isAdmin) {
       throw new Error("Solo la organizadora puede quitar fotos.");
     }
-    await ctx.storage.delete(photo.storageId);
+    if (photo.storageId) await ctx.storage.delete(photo.storageId);
     await ctx.db.delete(args.photoId);
     if (photo.driveFileId) {
       await ctx.scheduler.runAfter(0, internal.drive.removeFromDrive, {

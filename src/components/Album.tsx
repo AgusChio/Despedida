@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { Component, useCallback, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -118,8 +118,7 @@ function AlbumLive({
   const uploadsOpen = (preview ? windowForMoment?.openForGuests : windowForMoment?.open) === true;
   const uploadsLocked = windowForMoment?.locked === true;
   const connection = useQuery(api.photos.connection);
-  const generateUploadUrl = useMutation(api.photos.generateUploadUrl);
-  const savePhoto = useMutation(api.photos.savePhoto);
+  const publish = useAction(api.drive.publish);
   const removePhoto = useMutation(api.photos.remove);
   const toast = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -146,21 +145,12 @@ function AlbumLive({
     for (let index = 0; index < batch.length; index += 1) {
       try {
         const file = await prepareImage(batch[index]);
-        const uploadUrl = await generateUploadUrl({ itinerarySlug: slug });
-        const response = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": file.type || "application/octet-stream" },
-          body: file,
-        });
-        if (!response.ok) throw new Error("upload");
-        const { storageId } = (await response.json()) as {
-          storageId: Id<"_storage">;
-        };
-        await savePhoto({
+        if (file.size > 8_000_000) throw new Error("pesada");
+        await publish({
           itinerarySlug: slug,
-          storageId,
           fileName: file.name,
-          contentType: file.type || "application/octet-stream",
+          contentType: file.type || "image/jpeg",
+          bytes: await file.arrayBuffer(),
         });
       } catch {
         failed += 1;
@@ -176,7 +166,7 @@ function AlbumLive({
     } else if (skipped > 0) {
       toast.note(`Subí ${batch.length}. El resto, de a ${MAX_BATCH}.`);
     } else {
-      toast.ok("Listo. Ya están en el álbum.");
+      toast.ok("Listo. Quedaron en Drive.");
     }
   }
 
@@ -286,7 +276,7 @@ function AlbumLive({
                   )}
                 </button>
                 {photo.driveStatus === "en_drive" && (
-                  <span className="saved" title="También en Drive" />
+                  <span className="saved" title="En Drive" />
                 )}
                 {isAdmin && photo.driveStatus === "pendiente" && (
                   <span className="saved saved-wait" title="Subiendo a Drive" />

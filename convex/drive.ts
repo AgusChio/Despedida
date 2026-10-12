@@ -2,7 +2,9 @@
 
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { internalAction } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { action, internalAction } from "./_generated/server";
+import { accessToken } from "./google";
 
 const FOLDER_ENV = {
   tarde: "DRIVE_FOLDER_TARDE",
@@ -10,47 +12,9 @@ const FOLDER_ENV = {
   cafe: "DRIVE_FOLDER_CAFE",
 } as const;
 
-let cachedToken: { token: string; exp: number } | null = null;
-
 function envValue(name: string) {
   const value = process.env[name]?.trim();
   return value ? value : null;
-}
-
-async function accessToken() {
-  const clientId = envValue("GOOGLE_CLIENT_ID");
-  const clientSecret = envValue("GOOGLE_CLIENT_SECRET");
-  const refreshToken = envValue("GOOGLE_REFRESH_TOKEN");
-  if (!clientId || !clientSecret || !refreshToken) return null;
-
-  const now = Math.floor(Date.now() / 1000);
-  if (cachedToken && cachedToken.exp > now + 60) return cachedToken.token;
-
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-    }),
-  });
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(
-      `Google no renovó el acceso. Volvé a conectar Drive. ${detail.slice(0, 180)}`,
-    );
-  }
-  const data = (await response.json()) as {
-    access_token: string;
-    expires_in?: number;
-  };
-  cachedToken = {
-    token: data.access_token,
-    exp: now + (data.expires_in ?? 3600),
-  };
-  return data.access_token;
 }
 
 function concatBytes(parts: Uint8Array[]) {
@@ -123,6 +87,7 @@ export const mirrorToDrive = internalAction({
     }
 
     try {
+      if (!photo.storageId) return;
       const blob = await ctx.storage.get(photo.storageId);
       if (!blob) throw new Error("La foto no está en el álbum.");
       const token = await accessToken();
@@ -154,6 +119,95 @@ export const mirrorToDrive = internalAction({
         driveError: message,
       });
     }
+  },
+});
+
+const moment = v.union(
+  v.literal("tarde"),
+  v.literal("escapada"),
+  v.literal("cafe"),
+);
+
+export const publish = action({
+  args: {
+    itinerarySlug: moment,
+    fileName: v.string(),
+    contentType: v.string(),
+    bytes: v.bytes(),
+  },
+  handler: async (ctx, args) => {
+    const bytes = new Uint8Array(args.bytes);
+    if (bytes.byteLength > 8_000_000) {
+      throw new Error("La foto es muy pesada. Probá con otra.");
+    }
+    if (bytes.byteLength < 32) throw new Error("La foto llegó vacía.");
+    await ctx.runQuery(internal.photos.gate, {
+      itinerarySlug: args.itinerarySlug,
+    });
+    const folderId = envValue(FOLDER_ENV[args.itinerarySlug]);
+    const token = await accessToken();
+    if (!token || !folderId) throw new Error("Drive no está conectado.");
+    const uploaded = await uploadToDrive({
+      token,
+      folderId,
+      fileName: args.fileName.slice(0, 80) || "foto.jpg",
+      mime: args.contentType.startsWith("image/") ? args.contentType : "image/jpeg",
+      bytes,
+    });
+    await ctx.runMutation(internal.photos.record, {
+      itinerarySlug: args.itinerarySlug,
+      fileName: args.fileName,
+      contentType: args.contentType,
+      driveFileId: uploaded.id,
+      ...(uploaded.webViewLink ? { driveLink: uploaded.webViewLink } : {}),
+    });
+  },
+});
+
+export const drainStorage = internalAction({
+  args: {},
+  handler: async (ctx): Promise<{ seen: number; freed: number; failed: number }> => {
+    const photos: Array<{
+      _id: Id<"photos">;
+      storageId: Id<"_storage">;
+      driveFileId: string | null;
+      fileName: string;
+      contentType: string;
+      itinerarySlug: "tarde" | "escapada" | "cafe";
+    }> = await ctx.runQuery(internal.photos.withStorage, {});
+    let freed = 0;
+    let failed = 0;
+    for (const photo of photos) {
+      try {
+        let driveFileId = photo.driveFileId ?? undefined;
+        let driveLink: string | undefined;
+        if (!driveFileId) {
+          const folderId = envValue(FOLDER_ENV[photo.itinerarySlug]);
+          const token = await accessToken();
+          if (!token || !folderId) throw new Error("Drive no está conectado.");
+          const blob = await ctx.storage.get(photo.storageId);
+          if (!blob) throw new Error("La copia vieja ya no está.");
+          const uploaded = await uploadToDrive({
+            token,
+            folderId,
+            fileName: photo.fileName,
+            mime: photo.contentType || "image/jpeg",
+            bytes: new Uint8Array(await blob.arrayBuffer()),
+          });
+          driveFileId = uploaded.id;
+          driveLink = uploaded.webViewLink;
+        }
+        await ctx.runMutation(internal.photos.forgetStorage, {
+          photoId: photo._id,
+          driveFileId,
+          ...(driveLink ? { driveLink } : {}),
+        });
+        freed += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    return { seen: photos.length, freed, failed };
   },
 });
 

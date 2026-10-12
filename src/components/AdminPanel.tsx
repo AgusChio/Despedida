@@ -94,8 +94,8 @@ export function AdminPanel() {
         <h3>Google Drive</h3>
         {connection === undefined ? null : connection.connected ? (
           <p className="album-note">
-            Drive está conectado. Las fotos nuevas también se guardan en las
-            carpetas de cada momento.
+            Drive está conectado. Las fotos se guardan solo en las carpetas
+            de cada momento.
           </p>
         ) : (
           <>

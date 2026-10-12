@@ -11,6 +11,8 @@
 import type * as auth from "../auth.js";
 import type * as drive from "../drive.js";
 import type * as exam from "../exam.js";
+import type * as foto from "../foto.js";
+import type * as google from "../google.js";
 import type * as helpers from "../helpers.js";
 import type * as http from "../http.js";
 import type * as photos from "../photos.js";
@@ -28,6 +30,8 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   drive: typeof drive;
   exam: typeof exam;
+  foto: typeof foto;
+  google: typeof google;
   helpers: typeof helpers;
   http: typeof http;
   photos: typeof photos;

@@ -24,7 +24,7 @@ export default defineSchema({
       v.literal("escapada"),
       v.literal("cafe"),
     ),
-    storageId: v.id("_storage"),
+    storageId: v.optional(v.id("_storage")),
     fileName: v.string(),
     contentType: v.string(),
     uploadedBy: v.optional(v.string()),
