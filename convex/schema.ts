@@ -31,6 +31,7 @@ export default defineSchema({
     userId: v.optional(v.id("users")),
     driveFileId: v.optional(v.string()),
     driveLink: v.optional(v.string()),
+    r2Key: v.optional(v.string()),
     driveStatus: v.union(
       v.literal("pendiente"),
       v.literal("en_drive"),

@@ -166,7 +166,7 @@ function AlbumLive({
     } else if (skipped > 0) {
       toast.note(`Subí ${batch.length}. El resto, de a ${MAX_BATCH}.`);
     } else {
-      toast.ok("Listo. Quedaron en Drive.");
+      toast.ok("Listo. Quedó en el álbum.");
     }
   }
 
@@ -276,7 +276,7 @@ function AlbumLive({
                   )}
                 </button>
                 {photo.driveStatus === "en_drive" && (
-                  <span className="saved" title="En Drive" />
+                  <span className="saved" title="En el álbum" />
                 )}
                 {isAdmin && photo.driveStatus === "pendiente" && (
                   <span className="saved saved-wait" title="Subiendo a Drive" />

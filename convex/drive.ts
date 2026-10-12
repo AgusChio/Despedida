@@ -5,6 +5,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, internalAction } from "./_generated/server";
 import { accessToken } from "./google";
+import { putPhoto, r2Ready } from "./r2";
 
 const FOLDER_ENV = {
   tarde: "DRIVE_FOLDER_TARDE",
@@ -144,6 +145,21 @@ export const publish = action({
     await ctx.runQuery(internal.photos.gate, {
       itinerarySlug: args.itinerarySlug,
     });
+    const mime = args.contentType.startsWith("image/") ? args.contentType : "image/jpeg";
+    if (r2Ready()) {
+      const key = await putPhoto({
+        slug: args.itinerarySlug,
+        bytes,
+        contentType: mime,
+      });
+      await ctx.runMutation(internal.photos.record, {
+        itinerarySlug: args.itinerarySlug,
+        fileName: args.fileName,
+        contentType: mime,
+        r2Key: key,
+      });
+      return;
+    }
     const folderId = envValue(FOLDER_ENV[args.itinerarySlug]);
     const token = await accessToken();
     if (!token || !folderId) throw new Error("Drive no está conectado.");
@@ -151,7 +167,7 @@ export const publish = action({
       token,
       folderId,
       fileName: args.fileName.slice(0, 80) || "foto.jpg",
-      mime: args.contentType.startsWith("image/") ? args.contentType : "image/jpeg",
+      mime,
       bytes,
     });
     const shared = await shareForView(token, uploaded.id);

@@ -39,6 +39,13 @@ export const connection = query({
     );
     return {
       connected,
+      r2: Boolean(
+        envValue("R2_ACCOUNT_ID") &&
+          envValue("R2_ACCESS_KEY_ID") &&
+          envValue("R2_SECRET_ACCESS_KEY") &&
+          envValue("R2_BUCKET") &&
+          envValue("R2_PUBLIC_URL"),
+      ),
       links: {
         tarde: envValue("DRIVE_LINK_TARDE"),
         escapada: envValue("DRIVE_LINK_ESCAPADA"),
@@ -69,9 +76,7 @@ export const list = query({
         driveStatus: photo.driveStatus,
         createdAt: photo.createdAt,
         canRemove: user.isAdmin,
-        url: photo.storageId
-          ? await ctx.storage.getUrl(photo.storageId)
-          : driveView(photo._id, photo.driveFileId),
+        url: photoUrl(photo),
       })),
     );
   },
@@ -145,9 +150,18 @@ export const windows = query({
   },
 });
 
-function driveView(_photoId: string, driveFileId: string | undefined) {
-  if (!driveFileId) return null;
-  return `https://lh3.googleusercontent.com/d/${driveFileId}=w2000`;
+function photoUrl(photo: { r2Key?: string; driveFileId?: string }) {
+  if (photo.r2Key) {
+    const base = process.env.R2_PUBLIC_URL?.trim().replace(/\/$/, "");
+    if (base) {
+      const key = photo.r2Key.split("/").map(encodeURIComponent).join("/");
+      return `${base}/${key}`;
+    }
+  }
+  if (photo.driveFileId) {
+    return `https://lh3.googleusercontent.com/d/${photo.driveFileId}=w2000`;
+  }
+  return null;
 }
 
 export const gate = internalQuery({
@@ -171,12 +185,14 @@ export const record = internalMutation({
     itinerarySlug: slug,
     fileName: v.string(),
     contentType: v.string(),
-    driveFileId: v.string(),
+    driveFileId: v.optional(v.string()),
     driveLink: v.optional(v.string()),
+    r2Key: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await currentUser(ctx);
     if (!user?.hasName) throw new Error("Tenés que entrar.");
+    if (!args.driveFileId && !args.r2Key) throw new Error("La foto no se guardó.");
     const original =
       args.fileName.replace(/[/\\]/g, "").replace(/\s+/g, " ").slice(0, 80) ||
       "foto.jpg";
@@ -189,8 +205,9 @@ export const record = internalMutation({
         : "image/jpeg",
       uploadedBy: user.displayName,
       userId: user.id,
-      driveFileId: args.driveFileId,
+      ...(args.driveFileId ? { driveFileId: args.driveFileId } : {}),
       ...(args.driveLink ? { driveLink: args.driveLink } : {}),
+      ...(args.r2Key ? { r2Key: args.r2Key } : {}),
       driveStatus: "en_drive",
       createdAt: Date.now(),
     });
@@ -290,6 +307,9 @@ export const remove = mutation({
     }
     if (photo.storageId) await ctx.storage.delete(photo.storageId);
     await ctx.db.delete(args.photoId);
+    if (photo.r2Key) {
+      await ctx.scheduler.runAfter(0, internal.r2.removeObject, { key: photo.r2Key });
+    }
     if (photo.driveFileId) {
       await ctx.scheduler.runAfter(0, internal.drive.removeFromDrive, {
         driveFileId: photo.driveFileId,

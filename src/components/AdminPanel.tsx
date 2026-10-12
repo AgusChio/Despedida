@@ -91,8 +91,13 @@ export function AdminPanel() {
         <p className="album-note">Todavía no entró nadie.</p>
       )}
       <section className="drive-help" aria-label="Google Drive">
-        <h3>Google Drive</h3>
-        {connection === undefined ? null : connection.connected ? (
+        <h3>{connection?.r2 ? "Fotos" : "Google Drive"}</h3>
+        {connection === undefined ? null : connection.r2 ? (
+          <p className="album-note">
+            R2 está conectado. Las fotos nuevas se guardan ahí. Convex no se
+            queda con el archivo.
+          </p>
+        ) : connection.connected ? (
           <p className="album-note">
             Drive está conectado. Las fotos se guardan solo en las carpetas
             de cada momento.

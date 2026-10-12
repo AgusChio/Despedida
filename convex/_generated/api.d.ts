@@ -16,6 +16,7 @@ import type * as helpers from "../helpers.js";
 import type * as http from "../http.js";
 import type * as photos from "../photos.js";
 import type * as plan from "../plan.js";
+import type * as r2 from "../r2.js";
 import type * as rsvp from "../rsvp.js";
 import type * as users from "../users.js";
 
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   photos: typeof photos;
   plan: typeof plan;
+  r2: typeof r2;
   rsvp: typeof rsvp;
   users: typeof users;
 }>;
