@@ -1,0 +1,17 @@
+{
+  "name": "Despedida de Caro",
+  "short_name": "Caro",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8e7eb",
+  "theme_color": "#f7f1ea",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

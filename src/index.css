@@ -1232,6 +1232,29 @@ h2 {
   color: var(--rose-deep);
 }
 
+.notices {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.notices h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-style: italic;
+  font-size: 1.8rem;
+}
+
+.notices .pill-button {
+  margin-top: 12px;
+}
+
+.notices .pill-button.is-on {
+  background: var(--pistachio);
+  color: var(--ink);
+}
+
 .rsvp {
   margin: 18px 0 8px;
   padding: 16px 0 4px;

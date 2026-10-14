@@ -1,4 +1,5 @@
 import { NameForm } from "./NameForm.tsx";
+import { Notices } from "./Notices.tsx";
 
 export function Profile({
   email,
@@ -68,6 +69,7 @@ export function Profile({
         initialLast={lastName}
         onDone={onReady}
       />
+      {hasName && <Notices />}
     </>
   );
 }

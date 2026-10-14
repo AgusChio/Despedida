@@ -198,12 +198,14 @@ export const record = internalMutation({
       args.fileName.replace(/[/\\]/g, "").replace(/\s+/g, " ").slice(0, 80) ||
       "foto.jpg";
     const fileName = `${user.displayName} - ${original}`.slice(0, 180);
-    return await ctx.db.insert("photos", {
+    const contentType =
+      args.contentType.startsWith("image/") || args.contentType.startsWith("video/")
+        ? args.contentType
+        : "image/jpeg";
+    await ctx.db.insert("photos", {
       itinerarySlug: args.itinerarySlug,
       fileName,
-      contentType: args.contentType.startsWith("image/") || args.contentType.startsWith("video/")
-        ? args.contentType
-        : "image/jpeg",
+      contentType,
       uploadedBy: user.displayName,
       userId: user.id,
       ...(args.driveFileId ? { driveFileId: args.driveFileId } : {}),
@@ -211,6 +213,12 @@ export const record = internalMutation({
       ...(args.r2Key ? { r2Key: args.r2Key } : {}),
       driveStatus: "en_drive",
       createdAt: Date.now(),
+    });
+    await ctx.scheduler.runAfter(0, internal.alerts.bump, {
+      userId: user.id,
+      name: user.displayName || "Alguien",
+      itinerarySlug: args.itinerarySlug,
+      video: contentType.startsWith("video/"),
     });
   },
 });

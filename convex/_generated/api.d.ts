@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as alerts from "../alerts.js";
 import type * as auth from "../auth.js";
 import type * as drive from "../drive.js";
 import type * as exam from "../exam.js";
@@ -16,6 +17,7 @@ import type * as helpers from "../helpers.js";
 import type * as http from "../http.js";
 import type * as photos from "../photos.js";
 import type * as plan from "../plan.js";
+import type * as push from "../push.js";
 import type * as r2 from "../r2.js";
 import type * as rsvp from "../rsvp.js";
 import type * as users from "../users.js";
@@ -27,6 +29,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  alerts: typeof alerts;
   auth: typeof auth;
   drive: typeof drive;
   exam: typeof exam;
@@ -35,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   photos: typeof photos;
   plan: typeof plan;
+  push: typeof push;
   r2: typeof r2;
   rsvp: typeof rsvp;
   users: typeof users;

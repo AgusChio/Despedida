@@ -66,4 +66,20 @@ export default defineSchema({
     key: v.string(),
     on: v.boolean(),
   }).index("by_key", ["key"]),
+  pushSubs: defineTable({
+    userId: v.id("users"),
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_endpoint", ["endpoint"]),
+  uploadNotes: defineTable({
+    userId: v.id("users"),
+    itinerarySlug: v.union(v.literal("tarde"), v.literal("escapada"), v.literal("cafe")),
+    name: v.string(),
+    photos: v.number(),
+    videos: v.number(),
+    token: v.string(),
+  }).index("by_user_moment", ["userId", "itinerarySlug"]),
 });

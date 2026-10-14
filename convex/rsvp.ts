@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { currentUser, displayNameOf } from "./helpers";
 
@@ -50,12 +51,19 @@ export const answer = mutation({
         q.eq("userId", user.id).eq("itinerarySlug", args.itinerarySlug),
       )
       .unique();
+    if (existing?.going === args.going) return;
     if (existing) {
       await ctx.db.patch(existing._id, { going: args.going });
-      return;
+    } else {
+      await ctx.db.insert("rsvps", {
+        userId: user.id,
+        itinerarySlug: args.itinerarySlug,
+        going: args.going,
+      });
     }
-    await ctx.db.insert("rsvps", {
+    await ctx.scheduler.runAfter(0, internal.push.sendRsvp, {
       userId: user.id,
+      name: user.displayName || "Alguien",
       itinerarySlug: args.itinerarySlug,
       going: args.going,
     });
